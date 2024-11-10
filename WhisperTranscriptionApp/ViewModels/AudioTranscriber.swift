@@ -124,10 +124,14 @@ class AudioTranscriber: NSObject {
         processingQueue.async { [weak self] in
             self?.processRemainingAudio()
             self?.cleanupTranscription()
+            
+            // Ensure background task ends after processing
+            DispatchQueue.main.async {
+                self?.endBackgroundTask()
+            }
         }
         
         isTranscribing = false
-        endBackgroundTask()
     }
     
     // MARK: - Background Task Management

@@ -106,22 +106,27 @@ class RecordingViewController: UIViewController {
     @objc private func startRecording() {
         do {
             try audioRecorder.startRecording()
+            try audioTranscriber.startTranscribing(
+                updateHandler: { [weak self] transcriptionChunk in
+                    DispatchQueue.main.async {
+                        self?.updateTranscriptionLabel(with: transcriptionChunk)
+                    }
+                },
+                errorHandler: { [weak self] error in
+                    DispatchQueue.main.async {
+                        self?.showErrorAlert(error)
+                    }
+                }
+            )
             recordingStartTime = Date()
             startTimer()
+            
+            // Start Dynamic Island Live Activity
+            DynamicIslandController.shared.startDynamicIsland(sessionName: "Transcription Session")
+            
             recordButton.isHidden = true
             pauseButton.isHidden = false
             stopButton.isHidden = false
-
-            // Start transcribing audio in real-time
-            try audioTranscriber.transcribeInRealTime(updateHandler: { [weak self] transcriptionChunk in
-                self?.updateTranscriptionLabel(with: transcriptionChunk)
-            }, errorHandler: { [weak self] error in
-                self?.showErrorAlert(error)
-            })
-
-            // Start Dynamic Island Live Activity
-            DynamicIslandController.shared.startDynamicIsland(sessionName: "Recording Session")
-            
         } catch {
             showErrorAlert(error)
         }

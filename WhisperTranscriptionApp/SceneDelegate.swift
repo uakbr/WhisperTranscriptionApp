@@ -2,30 +2,33 @@ import UIKit
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
-    private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    var backgroundTask: UIBackgroundTaskIdentifier = .invalid
 
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+    func scene(_ scene: UIScene,
+               willConnectTo session: UISceneSession,
+               options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: windowScene)
-        
-        // Set up your initial view controller here
-        let navigationController = UINavigationController(rootViewController: TranscriptionListViewController())
+        let transcriptionListVC = TranscriptionListViewController()
+        let navigationController = UINavigationController(rootViewController: transcriptionListVC)
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {
-        // Start background task when app enters background
-        backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
-            self?.endBackgroundTask()
+        // Start background task to keep the app running while minimized
+        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "RecordingBackgroundTask") {
+            // This block is called when time expires
+            self.endBackgroundTask()
         }
     }
-    
+
     func sceneWillEnterForeground(_ scene: UIScene) {
-        // End background task when app returns to foreground
+        // End the background task when the app enters the foreground
         endBackgroundTask()
     }
-    
+
+    // MARK: - Helper Methods
     private func endBackgroundTask() {
         if backgroundTask != .invalid {
             UIApplication.shared.endBackgroundTask(backgroundTask)

@@ -17,10 +17,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 if !allowed {
                     // Handle permission denial through ErrorAlertManager
                     DispatchQueue.main.async {
-                        ErrorAlertManager.shared.showAlert(
-                            title: "Microphone Access Required",
-                            message: "Please enable microphone access in Settings to use the transcription features."
-                        )
+                        ErrorAlertManager.shared.handleMicrophonePermissionError()
                     }
                 }
             }

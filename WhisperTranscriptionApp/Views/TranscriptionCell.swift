@@ -40,6 +40,7 @@ class TranscriptionCell: UITableViewCell {
         let stackView = UIStackView(arrangedSubviews: [dateLabel, durationLabel, previewLabel])
         stackView.axis = .vertical
         stackView.spacing = 4
+        stackView.alignment = .leading
         
         contentView.addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false

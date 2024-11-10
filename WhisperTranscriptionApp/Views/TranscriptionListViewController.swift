@@ -134,7 +134,18 @@ extension TranscriptionListViewController: UITableViewDelegate {
             completion(true)
         }
         
-        let configuration = UISwipeActionsConfiguration(actions: [deleteAction])
+        let editAction = UIContextualAction(style: .normal, title: "Edit") { [weak self] _, _, completion in
+            guard let self = self else { return }
+            
+            let transcriptionVC = TranscriptionViewController()
+            transcriptionVC.transcription = self.transcriptions[indexPath.row]
+            self.navigationController?.pushViewController(transcriptionVC, animated: true)
+            
+            completion(true)
+        }
+        editAction.backgroundColor = .systemBlue
+        
+        let configuration = UISwipeActionsConfiguration(actions: [deleteAction, editAction])
         return configuration
     }
 } 
