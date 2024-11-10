@@ -1,5 +1,6 @@
 import UIKit
 import AVFoundation
+import ActivityKit
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -29,6 +30,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Prevent device from sleeping during recording
         UIApplication.shared.isIdleTimerDisabled = true
+        
+        // Request authorization for Live Activities
+        ActivityAuthorizationInfo().requestAuthorization { granted, error in
+            if let error = error {
+                print("Error requesting Live Activities authorization: \(error.localizedDescription)")
+            } else if !granted {
+                print("Live Activities authorization not granted.")
+            }
+        }
         
         return true
     }

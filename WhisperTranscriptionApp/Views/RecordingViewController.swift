@@ -118,6 +118,10 @@ class RecordingViewController: UIViewController {
             }, errorHandler: { [weak self] error in
                 self?.showErrorAlert(error)
             })
+
+            // Start Dynamic Island Live Activity
+            DynamicIslandController.shared.startDynamicIsland(sessionName: "Recording Session")
+            
         } catch {
             showErrorAlert(error)
         }
@@ -143,6 +147,9 @@ class RecordingViewController: UIViewController {
             date: Date(),
             duration: duration
         )
+        
+        // End Dynamic Island Live Activity
+        DynamicIslandController.shared.endDynamicIsland()
         
         resetUI()
     }
@@ -198,6 +205,12 @@ class RecordingViewController: UIViewController {
         let minutes = Int(elapsedTime) / 60
         let seconds = Int(elapsedTime) % 60
         timerLabel.text = String(format: "%02d:%02d", minutes, seconds)
+        
+        // Update Dynamic Island with elapsed time and transcription progress
+        DynamicIslandController.shared.updateDynamicIsland(
+            elapsedTime: elapsedTime,
+            transcriptionProgress: currentTranscription
+        )
     }
 
     // MARK: - Deinitialization
