@@ -11,18 +11,54 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: windowScene)
         
-        // Check if user is authenticated
-        let session = SupabaseManager.shared.client.auth.session
-        if session != nil {
-            let transcriptionListVC = TranscriptionListViewController()
-            let navigationController = UINavigationController(rootViewController: transcriptionListVC)
-            window?.rootViewController = navigationController
+        // Determine the initial view controller
+        if isFirstLaunch() {
+            presentOnboardingInterface()
+        } else if isUserAuthenticated() {
+            presentMainInterface()
         } else {
-            let loginVC = LoginViewController()
-            window?.rootViewController = loginVC
+            presentLoginInterface()
         }
         
         window?.makeKeyAndVisible()
+    }
+
+    // MARK: - Authentication Check
+    private func isUserAuthenticated() -> Bool {
+        // Check if Supabase session exists and is valid
+        if let session = SupabaseManager.shared.client.auth.session, session.user != nil {
+            return true
+        }
+        return false
+    }
+
+    // MARK: - Interface Presentation
+    private func presentMainInterface() {
+        let transcriptionListVC = TranscriptionListViewController()
+        let navigationController = UINavigationController(rootViewController: transcriptionListVC)
+        window?.rootViewController = navigationController
+    }
+
+    private func presentLoginInterface() {
+        let loginVC = LoginViewController()
+        window?.rootViewController = loginVC
+    }
+
+    // MARK: - Onboarding Check
+    private func isFirstLaunch() -> Bool {
+        let hasLaunchedKey = "hasLaunchedBefore"
+        let userDefaults = UserDefaults.standard
+        if userDefaults.bool(forKey: hasLaunchedKey) {
+            return false
+        } else {
+            userDefaults.set(true, forKey: hasLaunchedKey)
+            return true
+        }
+    }
+
+    private func presentOnboardingInterface() {
+        let onboardingVC = OnboardingViewController()
+        window?.rootViewController = onboardingVC
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {

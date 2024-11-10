@@ -80,13 +80,13 @@ class TranscriptionListViewController: UIViewController {
     
     private func setupNavigationBar() {
         title = "Transcriptions"
-        navigationController?.navigationBar.prefersLargeTitles = true
         
-        let addButton = UIBarButtonItem(
-            barButtonSystemItem: .add,
-            target: self,
-            action: #selector(startNewRecording)
-        )
+        // Add a logout button
+        let logoutButton = UIBarButtonItem(title: "Logout", style: .plain, target: self, action: #selector(handleLogout))
+        navigationItem.leftBarButtonItem = logoutButton
+        
+        // Add an add button
+        let addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(handleAddTranscription))
         navigationItem.rightBarButtonItem = addButton
     }
     
@@ -147,20 +147,30 @@ class TranscriptionListViewController: UIViewController {
     }
     
     @objc func handleLogout() {
-        SupabaseManager.shared.client.auth.signOut { result in
-            switch result {
-            case .success:
+        let alert = UIAlertController(title: "Logout", message: "Are you sure you want to logout?", preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Logout", style: .destructive, handler: { _ in
+            SupabaseManager.shared.client.auth.signOut { [weak self] result in
                 DispatchQueue.main.async {
-                    self.dismiss(animated: true)
+                    switch result {
+                    case .success:
+                        self?.navigationController?.dismiss(animated: true)
+                    case .failure(let error):
+                        ErrorAlertManager.shared.showAlert(
+                            title: "Logout Error",
+                            message: error.localizedDescription,
+                            in: self
+                        )
+                    }
                 }
-            case .failure(let error):
-                ErrorAlertManager.shared.showAlert(
-                    title: "Logout Error",
-                    message: error.localizedDescription,
-                    in: self
-                )
             }
-        }
+        }))
+        present(alert, animated: true)
+    }
+    
+    @objc private func handleAddTranscription() {
+        let recordingVC = RecordingViewController()
+        navigationController?.pushViewController(recordingVC, animated: true)
     }
 }
 
