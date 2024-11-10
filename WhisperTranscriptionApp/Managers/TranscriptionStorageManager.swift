@@ -44,18 +44,18 @@ class TranscriptionStorageManager {
     }
     
     func fetchTranscriptions() -> [Transcription] {
+        let context = persistentContainer.viewContext
         let fetchRequest: NSFetchRequest<Transcription> = Transcription.fetchRequest()
-        let sortDescriptor = NSSortDescriptor(key: "date", ascending: false)
-        fetchRequest.sortDescriptors = [sortDescriptor]
+        
+        // Add sort descriptors and fetch limits if necessary
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
+        fetchRequest.fetchBatchSize = 20
         
         do {
             let transcriptions = try context.fetch(fetchRequest)
             return transcriptions
         } catch {
-            ErrorAlertManager.shared.showAlert(
-                title: "Fetch Error",
-                message: "Failed to fetch transcriptions: \(error.localizedDescription)"
-            )
+            ErrorAlertManager.shared.handleStorageError(error)
             return []
         }
     }

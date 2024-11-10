@@ -5,7 +5,7 @@ struct LiveActivityView: View {
     let context: ActivityViewContext<RecordingAttributes>
     
     var body: some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: "mic.fill")
                     .foregroundColor(.red)
@@ -14,13 +14,16 @@ struct LiveActivityView: View {
             }
             Text(formattedElapsedTime)
                 .font(.subheadline)
-                .padding(.top, 2)
+                .foregroundColor(.secondary)
             Text(context.state.transcriptionProgress)
                 .font(.caption)
                 .lineLimit(1)
-                .padding(.top, 2)
+                .foregroundColor(.primary)
         }
-        .padding()
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(Color(.systemBackground).opacity(0.8))
+        .cornerRadius(10)
     }
     
     private var formattedElapsedTime: String {

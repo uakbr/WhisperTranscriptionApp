@@ -62,24 +62,34 @@ class TranscriptionViewController: UIViewController {
         audioProgressView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            playButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+            playButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             playButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             playButton.widthAnchor.constraint(equalToConstant: 44),
             playButton.heightAnchor.constraint(equalToConstant: 44),
             
-            transcriptionTextView.topAnchor.constraint(equalTo: playButton.bottomAnchor, constant: 10),
+            audioProgressView.centerYAnchor.constraint(equalTo: playButton.centerYAnchor),
+            audioProgressView.leadingAnchor.constraint(equalTo: playButton.trailingAnchor, constant: 10),
+            audioProgressView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            
+            transcriptionTextView.topAnchor.constraint(equalTo: playButton.bottomAnchor, constant: 20),
             transcriptionTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             transcriptionTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             transcriptionTextView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10),
-            
-            audioProgressView.topAnchor.constraint(equalTo: playButton.bottomAnchor, constant: 8),
-            audioProgressView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            audioProgressView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
         ])
         
         if let transcription = transcription {
             transcriptionTextView.text = transcription.text
         }
+        
+        // Style play button
+        playButton.tintColor = .systemBlue
+        playButton.contentMode = .scaleAspectFit
+        
+        // Style text view
+        transcriptionTextView.layer.borderColor = UIColor.lightGray.cgColor
+        transcriptionTextView.layer.borderWidth = 1.0
+        transcriptionTextView.layer.cornerRadius = 8.0
+        transcriptionTextView.textContainerInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
     }
     
     // MARK: - Actions

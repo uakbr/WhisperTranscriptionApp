@@ -55,6 +55,12 @@ class TranscriptionCell: UITableViewCell {
     
     // MARK: - Configuration
     func configure(with transcription: Transcription) {
+        dateLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+        durationLabel.font = .systemFont(ofSize: 14)
+        durationLabel.textColor = .darkGray
+        previewLabel.font = .systemFont(ofSize: 14)
+        previewLabel.textColor = .gray
+
         dateLabel.text = transcription.dateFormattedString()
         durationLabel.text = String(format: "Duration: %.1f seconds", transcription.duration)
         previewLabel.text = String(transcription.text.prefix(100)) + "..."

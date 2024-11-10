@@ -34,6 +34,8 @@ class AudioTranscriber: NSObject {
     private var transcriptionUpdateHandler: ((String) -> Void)?
     private var errorHandler: ((Error) -> Void)?
     
+    private let bufferQueue = DispatchQueue(label: "com.whispertranscription.bufferQueue", attributes: .concurrent)
+    
     // MARK: - Initialization
     private override init() {
         audioEngine = AVAudioEngine()
@@ -150,7 +152,7 @@ class AudioTranscriber: NSObject {
     
     // MARK: - Audio Processing
     private func processAudioBuffer(_ buffer: AVAudioPCMBuffer, time: AVAudioTime) {
-        processingQueue.async { [weak self] in
+        bufferQueue.async { [weak self] in
             guard let self = self else { return }
             
             do {

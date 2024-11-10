@@ -66,6 +66,19 @@ class RecordingViewController: UIViewController {
         view.addSubview(pauseButton)
         view.addSubview(stopButton)
 
+        // Style buttons
+        recordButton.setTitleColor(.white, for: .normal)
+        recordButton.backgroundColor = .systemRed
+        recordButton.layer.cornerRadius = 8
+        
+        pauseButton.setTitleColor(.white, for: .normal)
+        pauseButton.backgroundColor = .systemOrange
+        pauseButton.layer.cornerRadius = 8
+
+        stopButton.setTitleColor(.white, for: .normal)
+        stopButton.backgroundColor = .systemGray
+        stopButton.layer.cornerRadius = 8
+
         // Set up constraints
         setupConstraints()
     }
@@ -79,19 +92,19 @@ class RecordingViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             transcriptionLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            transcriptionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            transcriptionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            transcriptionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            transcriptionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
 
-            timerLabel.topAnchor.constraint(equalTo: transcriptionLabel.bottomAnchor, constant: 20),
+            timerLabel.topAnchor.constraint(equalTo: transcriptionLabel.bottomAnchor, constant: 10),
             timerLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            recordButton.topAnchor.constraint(equalTo: timerLabel.bottomAnchor, constant: 40),
+            recordButton.topAnchor.constraint(equalTo: timerLabel.bottomAnchor, constant: 20),
             recordButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            pauseButton.topAnchor.constraint(equalTo: recordButton.bottomAnchor, constant: 20),
+            pauseButton.topAnchor.constraint(equalTo: timerLabel.bottomAnchor, constant: 20),
             pauseButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            stopButton.topAnchor.constraint(equalTo: pauseButton.bottomAnchor, constant: 20),
+            stopButton.topAnchor.constraint(equalTo: pauseButton.bottomAnchor, constant: 10),
             stopButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
         ])
     }
