@@ -134,6 +134,16 @@ class RecordingViewController: UIViewController {
         audioRecorder.stopRecording()
         audioTranscriber.stopTranscribing()
         stopTimer()
+        
+        guard let duration = recordingStartTime.map({ Date().timeIntervalSince($0) }) else { return }
+        
+        // Save the transcription to Core Data
+        TranscriptionStorageManager.shared.saveTranscription(
+            text: currentTranscription.trimmingCharacters(in: .whitespacesAndNewlines),
+            date: Date(),
+            duration: duration
+        )
+        
         resetUI()
     }
 
