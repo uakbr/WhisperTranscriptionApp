@@ -63,4 +63,12 @@ class ErrorAlertManager {
             in: viewController
         )
     }
+    
+    func handleCloudKitError(_ error: Error, in viewController: UIViewController? = nil) {
+        showAlert(
+            title: "Cloud Error",
+            message: "An error occurred with iCloud: \(error.localizedDescription)",
+            in: viewController
+        )
+    }
 }

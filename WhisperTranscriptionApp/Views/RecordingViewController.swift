@@ -66,21 +66,37 @@ class RecordingViewController: UIViewController {
         view.addSubview(pauseButton)
         view.addSubview(stopButton)
 
-        // Style buttons
-        recordButton.setTitleColor(.white, for: .normal)
-        recordButton.backgroundColor = .systemRed
-        recordButton.layer.cornerRadius = 8
-        
-        pauseButton.setTitleColor(.white, for: .normal)
-        pauseButton.backgroundColor = .systemOrange
-        pauseButton.layer.cornerRadius = 8
+        // Style labels
+        transcriptionLabel.font = UIFont.systemFont(ofSize: 18)
+        transcriptionLabel.textColor = .label
 
-        stopButton.setTitleColor(.white, for: .normal)
-        stopButton.backgroundColor = .systemGray
-        stopButton.layer.cornerRadius = 8
+        timerLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 16, weight: .medium)
+        timerLabel.textColor = .secondaryLabel
+
+        // Style buttons
+        styleButton(recordButton, title: "Start Recording", backgroundColor: .systemRed)
+        styleButton(pauseButton, title: "Pause Recording", backgroundColor: .systemOrange)
+        styleButton(stopButton, title: "Stop Recording", backgroundColor: .systemGray)
 
         // Set up constraints
         setupConstraints()
+
+        // Add accessibility identifiers
+        recordButton.accessibilityIdentifier = "recordButton"
+        pauseButton.accessibilityIdentifier = "pauseButton"
+        stopButton.accessibilityIdentifier = "stopButton"
+        transcriptionLabel.accessibilityIdentifier = "transcriptionLabel"
+        timerLabel.accessibilityIdentifier = "timerLabel"
+    }
+
+    private func styleButton(_ button: UIButton, title: String, backgroundColor: UIColor) {
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = backgroundColor
+        button.layer.cornerRadius = 8
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        button.widthAnchor.constraint(equalToConstant: 200).isActive = true
     }
 
     private func setupConstraints() {
@@ -98,13 +114,13 @@ class RecordingViewController: UIViewController {
             timerLabel.topAnchor.constraint(equalTo: transcriptionLabel.bottomAnchor, constant: 10),
             timerLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            recordButton.topAnchor.constraint(equalTo: timerLabel.bottomAnchor, constant: 20),
+            recordButton.topAnchor.constraint(equalTo: timerLabel.bottomAnchor, constant: 30),
             recordButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            pauseButton.topAnchor.constraint(equalTo: timerLabel.bottomAnchor, constant: 20),
+            pauseButton.topAnchor.constraint(equalTo: recordButton.bottomAnchor, constant: 15),
             pauseButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
 
-            stopButton.topAnchor.constraint(equalTo: pauseButton.bottomAnchor, constant: 10),
+            stopButton.topAnchor.constraint(equalTo: pauseButton.bottomAnchor, constant: 15),
             stopButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
         ])
     }
@@ -157,22 +173,32 @@ class RecordingViewController: UIViewController {
             try audioRecorder.stopRecording()
             audioTranscriber.stopTranscribing()
             stopTimer()
-            
+
             guard let duration = recordingStartTime.map({ Date().timeIntervalSince($0) }) else { return }
-            
-            // Save the transcription to Core Data with audio URL
-            try TranscriptionStorageManager.shared.saveTranscription(
+
+            let transcriptionRecord = TranscriptionRecord(
                 text: currentTranscription.trimmingCharacters(in: .whitespacesAndNewlines),
                 date: Date(),
                 duration: duration,
                 audioURL: audioRecorder.currentRecordingURL
             )
-            
+
+            CloudKitManager.shared.saveTranscription(transcriptionRecord) { result in
+                switch result {
+                case .success:
+                    // Handle success, maybe notify the user or update UI
+                    break
+                case .failure(let error):
+                    ErrorAlertManager.shared.handleCloudKitError(error, in: self)
+                }
+            }
+
             // End Dynamic Island Live Activity
             DynamicIslandController.shared.endDynamicIsland()
-            
+
             resetUI()
         } catch {
+            // Handle errors during stop recording and saving
             ErrorAlertManager.shared.handleRecordingError(error, in: self)
         }
     }

@@ -1,5 +1,6 @@
 import UIKit
 import CoreData
+import AuthenticationServices
 
 class TranscriptionListViewController: UIViewController {
     // MARK: - UI Elements
@@ -21,14 +22,17 @@ class TranscriptionListViewController: UIViewController {
         return label
     }()
     
+    private let signInButton = ASAuthorizationAppleIDButton()
+    
     // MARK: - Properties
-    private var transcriptions: [Transcription] = []
+    private var transcriptions: [TranscriptionRecord] = []
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
         setupNavigationBar()
+        checkAuthenticationState()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -58,6 +62,19 @@ class TranscriptionListViewController: UIViewController {
         
         tableView.dataSource = self
         tableView.delegate = self
+        
+        // Configure the Sign in with Apple button
+        signInButton.translatesAutoresizingMaskIntoConstraints = false
+        signInButton.addTarget(self, action: #selector(handleSignInWithAppleTapped), for: .touchUpInside)
+        view.addSubview(signInButton)
+        
+        NSLayoutConstraint.activate([
+            signInButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            signInButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            signInButton.heightAnchor.constraint(equalToConstant: 50),
+            signInButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            signInButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+        ])
     }
     
     private func setupNavigationBar() {
@@ -74,14 +91,31 @@ class TranscriptionListViewController: UIViewController {
     
     // MARK: - Data Management
     private func fetchTranscriptions() {
-        transcriptions = TranscriptionStorageManager.shared.fetchTranscriptions()
-        emptyStateLabel.isHidden = !transcriptions.isEmpty
-        tableView.reloadData()
+        CloudKitManager.shared.fetchTranscriptions { [weak self] result in
+            switch result {
+            case .success(let records):
+                self?.transcriptions = records
+                self?.tableView.reloadData()
+                self?.emptyStateLabel.isHidden = !records.isEmpty
+            case .failure(let error):
+                ErrorAlertManager.shared.handleCloudKitError(error, in: self)
+            }
+        }
     }
     
     @objc private func startNewRecording() {
         let recordingVC = RecordingViewController()
         navigationController?.pushViewController(recordingVC, animated: true)
+    }
+    
+    @objc func handleSignInWithAppleTapped() {
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+
+        let authorizationController = ASAuthorizationController(authorizationRequests: [request])
+        authorizationController.delegate = self
+        authorizationController.presentationContextProvider = self
+        authorizationController.performRequests()
     }
 }
 
@@ -152,5 +186,41 @@ extension TranscriptionListViewController: UITableViewDelegate {
         
         let configuration = UISwipeActionsConfiguration(actions: [deleteAction, editAction])
         return configuration
+    }
+}
+
+// MARK: - ASAuthorizationControllerDelegate
+extension TranscriptionListViewController: ASAuthorizationControllerDelegate {
+    func authorizationController(controller: ASAuthorizationController,
+                                 didCompleteWithAuthorization authorization: ASAuthorization) {
+        if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+            // Handle successful authentication
+            let userIdentifier = appleIDCredential.user
+            let fullName = appleIDCredential.fullName
+            let email = appleIDCredential.email
+
+            // Save the userIdentifier in Keychain
+            KeychainHelper.shared.saveUserIdentifier(userIdentifier)
+
+            // Update UI accordingly
+            signInButton.isHidden = true
+            fetchTranscriptions()
+        }
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        // Handle error
+        ErrorAlertManager.shared.showAlert(
+            title: "Authentication Error",
+            message: error.localizedDescription,
+            in: self
+        )
+    }
+}
+
+// MARK: - ASAuthorizationControllerPresentationContextProviding
+extension TranscriptionListViewController: ASAuthorizationControllerPresentationContextProviding {
+    func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return self.view.window!
     }
 } 

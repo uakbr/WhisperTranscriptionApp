@@ -83,13 +83,26 @@ class TranscriptionViewController: UIViewController {
         
         // Style play button
         playButton.tintColor = .systemBlue
-        playButton.contentMode = .scaleAspectFit
-        
+        playButton.contentVerticalAlignment = .fill
+        playButton.contentHorizontalAlignment = .fill
+        playButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        playButton.widthAnchor.constraint(equalTo: playButton.heightAnchor).isActive = true
+
+        // Style progress view
+        audioProgressView.progressTintColor = .systemBlue
+        audioProgressView.trackTintColor = .systemGray5
+
         // Style text view
         transcriptionTextView.layer.borderColor = UIColor.lightGray.cgColor
         transcriptionTextView.layer.borderWidth = 1.0
         transcriptionTextView.layer.cornerRadius = 8.0
         transcriptionTextView.textContainerInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        transcriptionTextView.font = UIFont.systemFont(ofSize: 16)
+        transcriptionTextView.textColor = .label
+
+        // Add accessibility identifiers
+        transcriptionTextView.accessibilityIdentifier = "transcriptionTextView"
+        playButton.accessibilityIdentifier = "playButton"
     }
     
     // MARK: - Actions

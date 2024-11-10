@@ -56,8 +56,11 @@ class TranscriptionCell: UITableViewCell {
     // MARK: - Configuration
     func configure(with transcription: Transcription) {
         dateLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+        dateLabel.textColor = .label
+
         durationLabel.font = .systemFont(ofSize: 14)
-        durationLabel.textColor = .darkGray
+        durationLabel.textColor = .secondaryLabel
+
         previewLabel.font = .systemFont(ofSize: 14)
         previewLabel.textColor = .gray
 

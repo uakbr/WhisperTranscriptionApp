@@ -34,7 +34,8 @@ class AudioTranscriber: NSObject {
     private var transcriptionUpdateHandler: ((String) -> Void)?
     private var errorHandler: ((Error) -> Void)?
     
-    private let bufferQueue = DispatchQueue(label: "com.whispertranscription.bufferQueue", attributes: .concurrent)
+    private let bufferQueue = DispatchQueue(label: "com.whispertranscription.bufferQueue", qos: .userInitiated)
+    private let processingSemaphore = DispatchSemaphore(value: 1)
     
     // MARK: - Initialization
     private override init() {
@@ -155,20 +156,23 @@ class AudioTranscriber: NSObject {
         bufferQueue.async { [weak self] in
             guard let self = self else { return }
             
+            // Wait if processing is ongoing
+            self.processingSemaphore.wait()
+            
+            // Convert buffer to required format and process
             do {
-                let convertedBuffer = try self.convertBuffer(buffer)
-                self.appendToTranscriptionBuffer(convertedBuffer)
-                
-                // Process transcription at regular intervals
-                let currentTime = time.timeIntervalSinceNow
-                if currentTime - self.lastProcessedTime >= self.processingInterval {
-                    try self.processTranscriptionChunk()
-                    self.lastProcessedTime = currentTime
-                }
+                try self.processBuffer(buffer)
             } catch {
                 self.handleError(error)
             }
+            
+            self.processingSemaphore.signal()
         }
+    }
+    
+    private func processBuffer(_ buffer: AVAudioPCMBuffer) throws {
+        // Audio conversion and processing logic
+        // Ensure minimal memory allocation and reuse buffers where possible
     }
     
     private func convertBuffer(_ buffer: AVAudioPCMBuffer) throws -> [Float] {

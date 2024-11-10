@@ -3,9 +3,10 @@ import ActivityKit
 
 struct LiveActivityView: View {
     let context: ActivityViewContext<RecordingAttributes>
-    
+    @Environment(\.colorScheme) var colorScheme
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: "mic.fill")
                     .foregroundColor(.red)
@@ -20,17 +21,18 @@ struct LiveActivityView: View {
                 .lineLimit(1)
                 .foregroundColor(.primary)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(Color(.systemBackground).opacity(0.8))
-        .cornerRadius(10)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground).opacity(0.8))
+                .shadow(radius: 2)
+        )
+        .activitySystemActionForegroundColor(.primary)
     }
-    
-    private var formattedElapsedTime: String {
-        let totalSeconds = Int(context.state.elapsedTime)
-        let minutes = totalSeconds / 60
-        let seconds = totalSeconds % 60
-        return String(format: "%02d:%02d elapsed", minutes, seconds)
+
+    var formattedElapsedTime: String {
+        let duration = context.state.elapsedTime
+        return String(format: "Duration: %02d:%02d", Int(duration) / 60, Int(duration) % 60)
     }
 }
 

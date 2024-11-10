@@ -141,33 +141,33 @@ class WhisperModelManager {
     }
     
     // MARK: - Inference
-    func transcribe(audioURL: URL) async throws -> String {
-        return try await withCheckedThrowingContinuation { continuation in
-            modelQueue.async {
-                do {
-                    let file = try AVAudioFile(forReading: audioURL)
-                    let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
-                                             sampleRate: self.sampleRate,
-                                             channels: 1,
-                                             interleaved: false)
-                    
-                    let buffer = AVAudioPCMBuffer(pcmFormat: format!,
-                                                frameCapacity: AVAudioFrameCount(self.sampleRate * self.maxAudioLength))!
-                    try file.read(into: buffer)
-                    
-                    let melSpectrogram = try self.convertAudioToMelSpectrogram(buffer)
-                    
-                    guard let model = self.model else {
-                        throw WhisperError.modelNotLoaded
-                    }
-                    
-                    let prediction = try model.prediction(audio_input: melSpectrogram)
-                    let transcription = try self.processModelOutput(prediction.encoder_output)
-                    
-                    continuation.resume(returning: transcription)
-                } catch {
-                    continuation.resume(throwing: error)
+    func transcribe(audioBuffer: AVAudioPCMBuffer, completion: @escaping (Result<String, Error>) -> Void) {
+        modelQueue.async {
+            do {
+                // Preprocessing
+                let melSpectrogram = try self.generateMelSpectrogram(from: audioBuffer)
+                
+                // Limit the spectrogram length to the model's maximum input length
+                let maxFrames = 3000 // Adjust based on model capacity
+                if melSpectrogram.count > maxFrames {
+                    melSpectrogram = Array(melSpectrogram.prefix(maxFrames))
                 }
+
+                // Prepare input for the model
+                let modelInput = try self.prepareModelInput(from: melSpectrogram)
+                
+                // Run inference
+                guard let model = self.model else {
+                    throw WhisperError.modelNotLoaded
+                }
+                let prediction = try model.prediction(melSpectrogram: modelInput)
+                
+                // Postprocessing
+                let transcription = try self.decodePrediction(prediction)
+                
+                completion(.success(transcription))
+            } catch {
+                completion(.failure(error))
             }
         }
     }
@@ -196,6 +196,22 @@ class WhisperModelManager {
         // Convert indices to tokens and join
         let tokens = try indices.map { try WhisperTokenizer.shared.indexToToken($0) }
         return tokens.joined(separator: " ")
+    }
+    
+    private func prepareModelInput(from melSpectrogram: [[Float]]) throws -> MLMultiArray {
+        let melFrames = melSpectrogram.count
+        let melBins = melSpectrogram[0].count
+
+        // Create MLMultiArray in the correct shape [1, 80, n_frames]
+        let melShape = [1, melBins as NSNumber, melFrames as NSNumber]
+        let melArray = try MLMultiArray(shape: melShape, dataType: .float32)
+        
+        // Flatten the 2D array and copy data
+        let flattenedMels = melSpectrogram.flatMap { $0 }
+        let pointer = melArray.dataPointer.bindMemory(to: Float32.self, capacity: flattenedMels.count)
+        pointer.assign(from: flattenedMels, count: flattenedMels.count)
+        
+        return melArray
     }
 }
 
