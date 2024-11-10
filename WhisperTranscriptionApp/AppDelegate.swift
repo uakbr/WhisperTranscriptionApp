@@ -22,7 +22,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 }
             }
         } catch {
-            print("Failed to configure audio session: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                ErrorAlertManager.shared.showAlert(
+                    title: "Audio Session Error",
+                    message: "Failed to configure audio session: \(error.localizedDescription)"
+                )
+            }
         }
         
         // Prevent device from sleeping during recording
@@ -30,10 +35,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Request authorization for Live Activities
         ActivityAuthorizationInfo().requestAuthorization { granted, error in
-            if let error = error {
-                print("Error requesting Live Activities authorization: \(error.localizedDescription)")
-            } else if !granted {
-                print("Live Activities authorization not granted.")
+            DispatchQueue.main.async {
+                if let error = error {
+                    ErrorAlertManager.shared.showAlert(
+                        title: "Live Activities Error",
+                        message: error.localizedDescription
+                    )
+                } else if !granted {
+                    ErrorAlertManager.shared.showAlert(
+                        title: "Live Activities Not Authorized",
+                        message: "Please enable Live Activities in Settings to use this feature."
+                    )
+                    // Optionally, adjust UI to reflect lack of Live Activities
+                }
             }
         }
         

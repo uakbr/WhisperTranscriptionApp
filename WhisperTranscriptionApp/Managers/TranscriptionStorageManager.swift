@@ -85,4 +85,14 @@ class TranscriptionStorageManager {
             }
         }
     }
+
+    func syncTranscriptions() {
+        // Fetch local and remote transcriptions
+        // Compare and resolve conflicts
+        // Update both local and remote storage
+        // Inform the user of sync status
+        DispatchQueue.main.async {
+            // Update UI or notify user
+        }
+    }
 }

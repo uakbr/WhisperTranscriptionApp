@@ -34,6 +34,8 @@ class TranscriptionListViewController: UIViewController {
         setupUI()
         setupNavigationBar()
         fetchTranscriptions()
+        // Observe session expiration
+        NotificationCenter.default.addObserver(self, selector: #selector(handleSessionExpired), name: .sessionExpired, object: nil)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -73,8 +75,8 @@ class TranscriptionListViewController: UIViewController {
             signInButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             signInButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
             signInButton.heightAnchor.constraint(equalToConstant: 50),
-            signInButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            signInButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+            signInButton.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 20),
+            signInButton.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -20)
         ])
     }
     
@@ -171,6 +173,12 @@ class TranscriptionListViewController: UIViewController {
     @objc private func handleAddTranscription() {
         let recordingVC = RecordingViewController()
         navigationController?.pushViewController(recordingVC, animated: true)
+    }
+
+    @objc private func handleSessionExpired() {
+        // Present login screen
+        let loginVC = LoginViewController()
+        present(loginVC, animated: true)
     }
 }
 

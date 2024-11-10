@@ -51,11 +51,13 @@ class RecordingViewControllerUITests: XCTestCase {
     }
 
     func testTranscriptionListView() {
+        // Ensure at least one transcription exists
+        testRecordingFlow()
+
         // Verify that Transcriptions list is displayed
         let transcriptionsNavigationBar = app.navigationBars["Transcriptions"]
         XCTAssertTrue(transcriptionsNavigationBar.exists, "Transcriptions navigation bar should exist")
 
-        // Assuming at least one transcription exists after recording in the previous test
         let transcriptionCell = app.tables.cells.element(boundBy: 0)
         XCTAssertTrue(transcriptionCell.exists, "There should be at least one transcription cell")
 

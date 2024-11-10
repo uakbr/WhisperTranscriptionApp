@@ -23,13 +23,8 @@ class WhisperModelManagerTests: XCTestCase {
     func testTranscriptionWithValidAudio() {
         // Prepare a sample audio buffer with known content
         guard let bundle = Bundle(for: type(of: self)),
-              let audioURL = bundle.url(forResource: "test_sample", withExtension: "wav"),
-              let file = try? AVAudioFile(forReading: audioURL),
-              let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
-                                         sampleRate: 16000.0,
-                                         channels: 1,
-                                         interleaved: false) else {
-            XCTFail("Failed to load test audio file")
+              let audioURL = bundle.url(forResource: "test_sample", withExtension: "wav") else {
+            XCTFail("Test audio file 'test_sample.wav' not found in test bundle")
             return
         }
 

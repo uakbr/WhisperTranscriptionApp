@@ -233,9 +233,9 @@ class LoginViewController: UIViewController, ASAuthorizationControllerDelegate, 
     
     // MARK: - Navigation
     private func presentMainInterface() {
-        let transcriptionListVC = TranscriptionListViewController()
-        let navController = UINavigationController(rootViewController: transcriptionListVC)
-        navController.modalPresentationStyle = .fullScreen
+        let mainVC = TranscriptionListViewController()
+        let navController = UINavigationController(rootViewController: mainVC)
+        navController.modalTransitionStyle = .crossDissolve
         present(navController, animated: true)
     }
     

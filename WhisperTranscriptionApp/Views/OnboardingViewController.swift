@@ -19,7 +19,7 @@ class OnboardingViewController: UIViewController {
             OnboardingSlide(title: "Welcome", description: "Transcribe your thoughts effortlessly.", imageName: "onboarding1"),
             OnboardingSlide(title: "Record", description: "Record audio seamlessly.", imageName: "onboarding2"),
             OnboardingSlide(title: "Transcribe", description: "Get accurate transcriptions in real-time.", imageName: "onboarding3"),
-            OnboardingSlide(title: "Manage", description: "Save and manage your transcriptions.", imageName: "onboarding4")
+            OnboardingSlide(title: "Manage", description: "Save and manage your transcriptions.", imageName: "onboarding4", action: getStartedTapped)
         ]
     }
     
@@ -70,6 +70,14 @@ class OnboardingViewController: UIViewController {
         
         scrollView.contentSize = CGSize(width: view.frame.width * CGFloat(slides.count), height: view.frame.height)
     }
+    
+    @objc private func getStartedTapped() {
+        // Dismiss onboarding and present login screen
+        if let window = UIApplication.shared.windows.first {
+            window.rootViewController = LoginViewController()
+            UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: nil)
+        }
+    }
 }
 
 // MARK: - UIScrollViewDelegate
@@ -85,6 +93,7 @@ struct OnboardingSlide {
     let title: String
     let description: String
     let imageName: String
+    var action: (() -> Void)?
     
     var view: UIView {
         let slideView = UIView()
@@ -110,7 +119,7 @@ struct OnboardingSlide {
         getStartedButton.tintColor = .white
         getStartedButton.layer.cornerRadius = 8
         getStartedButton.clipsToBounds = true
-        getStartedButton.addTarget(self, action: #selector(getStartedTapped), for: .touchUpInside)
+        getStartedButton.addTarget(nil, action: #selector(buttonTapped), for: .touchUpInside)
         getStartedButton.isHidden = (title != "Manage")
         
         [imageView, titleLabel, descriptionLabel, getStartedButton].forEach {
@@ -140,11 +149,7 @@ struct OnboardingSlide {
         return slideView
     }
     
-    @objc private func getStartedTapped() {
-        // Dismiss onboarding and present login screen
-        if let window = UIApplication.shared.windows.first {
-            window.rootViewController = LoginViewController()
-            UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: nil)
-        }
+    @objc private func buttonTapped() {
+        action?()
     }
 } 

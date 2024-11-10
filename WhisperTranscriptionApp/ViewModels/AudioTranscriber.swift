@@ -37,6 +37,8 @@ class AudioTranscriber: NSObject {
     private let bufferQueue = DispatchQueue(label: "com.whispertranscription.bufferQueue", qos: .userInitiated)
     private let processingSemaphore = DispatchSemaphore(value: 1)
     
+    private let synchronizationQueue = DispatchQueue(label: "com.whispertranscription.audioTranscriberQueue")
+    
     // MARK: - Initialization
     private override init() {
         audioEngine = AVAudioEngine()
@@ -326,6 +328,18 @@ class AudioTranscriber: NSObject {
             stopTranscribing()
         default:
             break
+        }
+    }
+
+    func transcribe(audioBuffer: AVAudioPCMBuffer, completion: @escaping (Result<String, Error>) -> Void) {
+        synchronizationQueue.async {
+            // Perform transcription
+        }
+    }
+
+    func startTranscribing() {
+        synchronizationQueue.async {
+            // Start audio engine and handle buffers
         }
     }
 }

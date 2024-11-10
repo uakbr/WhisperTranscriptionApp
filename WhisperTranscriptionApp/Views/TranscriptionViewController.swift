@@ -131,13 +131,13 @@ class TranscriptionViewController: UIViewController {
             playButton.setImage(UIImage(systemName: "pause.circle.fill"), for: .normal)
             AudioFileStorage.shared.playAudioFile(
                 at: audioURL,
-                progressHandler: { [weak self] progress in
-                    self?.audioProgressView.progress = Float(progress)
+                progressHandler: { progress in
+                    self.audioProgressView.progress = Float(progress)
                 },
-                completionHandler: { [weak self] in
-                    self?.isPlaying = false
-                    self?.playButton.setImage(UIImage(systemName: "play.circle.fill"), for: .normal)
-                    self?.audioProgressView.progress = 0
+                completionHandler: {
+                    self.isPlaying = false
+                    self.playButton.setImage(UIImage(systemName: "play.circle.fill"), for: .normal)
+                    self.audioProgressView.progress = 0
                 }
             )
         } else {

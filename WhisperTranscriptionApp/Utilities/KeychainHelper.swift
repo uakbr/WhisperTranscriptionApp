@@ -12,16 +12,18 @@ class KeychainHelper {
             kSecValueData: data
         ] as CFDictionary
 
-        SecItemDelete(query) // Delete any existing item
-        SecItemAdd(query, nil)
+        let status = SecItemAdd(query, nil)
+        if status != errSecSuccess {
+            print("Error saving to Keychain: \(status)")
+            // Optionally, handle the error or notify the user
+        }
     }
 
     func getUserIdentifier() -> String? {
         let query = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrAccount: userIdentifierKey,
-            kSecReturnData: true,
-            kSecMatchLimit: kSecMatchLimitOne
+            kSecReturnData: true
         ] as CFDictionary
 
         var dataTypeRef: AnyObject?
@@ -31,7 +33,11 @@ class KeychainHelper {
             if let data = dataTypeRef as? Data, let identifier = String(data: data, encoding: .utf8) {
                 return identifier
             }
+        } else {
+            print("Error retrieving from Keychain: \(status)")
+            // Optionally, handle the error or notify the user
         }
+
         return nil
     }
 

@@ -25,11 +25,19 @@ class ErrorAlertManager {
     
     // Specific error handling methods
     func handleMicrophonePermissionError(in viewController: UIViewController? = nil) {
-        showAlert(
-            title: "Microphone Access Required",
-            message: "Please enable microphone access in Settings to use the recording features.",
-            in: viewController
+        let alert = UIAlertController(
+            title: "Microphone Access Denied",
+            message: "Please enable microphone access in Settings to use this feature.",
+            preferredStyle: .alert
         )
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Open Settings", style: .default) { _ in
+            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                UIApplication.shared.open(settingsURL)
+            }
+        })
+
+        (viewController ?? topViewController())?.present(alert, animated: true)
     }
     
     func handleModelLoadingError(_ error: Error, in viewController: UIViewController? = nil) {
