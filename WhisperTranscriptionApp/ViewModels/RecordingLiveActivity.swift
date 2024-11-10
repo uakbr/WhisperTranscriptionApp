@@ -1,0 +1,1 @@
+// Manages Live Activity configurations and updates

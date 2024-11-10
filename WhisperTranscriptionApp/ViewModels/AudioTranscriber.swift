@@ -1,0 +1,1 @@
+// Handles transcription processes and interaction with Whisper model

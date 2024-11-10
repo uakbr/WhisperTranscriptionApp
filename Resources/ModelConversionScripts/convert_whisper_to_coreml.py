@@ -1,0 +1,1 @@
+// Script for converting Whisper model to CoreML format

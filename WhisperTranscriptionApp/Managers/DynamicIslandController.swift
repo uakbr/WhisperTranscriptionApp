@@ -1,0 +1,1 @@
+// Controls status updates on the Dynamic Island

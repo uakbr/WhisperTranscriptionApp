@@ -1,0 +1,1 @@
+// Main view for recording controls and live transcription display

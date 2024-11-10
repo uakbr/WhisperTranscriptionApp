@@ -1,0 +1,1 @@
+// View for displaying Live Activity content
