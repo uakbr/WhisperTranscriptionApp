@@ -2,20 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Existing entries -->
-    
-    <!-- Required background modes -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Microphone access is required for audio recording and transcription.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>audio</string>
         <string>processing</string>
     </array>
-    
-    <!-- Microphone usage description -->
-    <key>NSMicrophoneUsageDescription</key>
-    <string>Microphone access is required for audio recording and transcription.</string>
-    
-    <!-- Scene configuration -->
+    <key>NSSupportsLiveActivities</key>
+    <true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
     <key>UIApplicationSceneManifest</key>
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>

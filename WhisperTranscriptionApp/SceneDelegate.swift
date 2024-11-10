@@ -8,9 +8,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: windowScene)
         
-        // Set up initial view controller
-        let recordingViewController = RecordingViewController()
-        let navigationController = UINavigationController(rootViewController: recordingViewController)
+        // Set up your initial view controller here
+        let navigationController = UINavigationController(rootViewController: TranscriptionListViewController())
         window?.rootViewController = navigationController
         window?.makeKeyAndVisible()
     }
@@ -21,7 +20,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             self?.endBackgroundTask()
         }
     }
-
+    
     func sceneWillEnterForeground(_ scene: UIScene) {
         // End background task when app returns to foreground
         endBackgroundTask()
@@ -32,10 +31,5 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             UIApplication.shared.endBackgroundTask(backgroundTask)
             backgroundTask = .invalid
         }
-    }
-
-    func sceneDidDisconnect(_ scene: UIScene) {
-        // Clean up resources if needed
-        endBackgroundTask()
     }
 }
