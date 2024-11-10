@@ -7,6 +7,7 @@ class AudioTranscriber: NSObject {
     static let shared = AudioTranscriber()
     
     private let whisperManager = WhisperModelManager.shared
+    private let tokenizer = WhisperTokenizer.shared
     private var audioEngine: AVAudioEngine
     private var inputNode: AVAudioInputNode
     private var audioConverter: AVAudioConverter?
@@ -15,11 +16,19 @@ class AudioTranscriber: NSObject {
     private let modelSampleRate: Double = 16000
     private let bufferSize: AVAudioFrameCount = 4096
     private let maxBufferCount = 1875 // 30 seconds at 16kHz
+    private let processingInterval: TimeInterval = 0.5 // Process every 500ms
     
     // Transcription state
     private var isTranscribing = false
     private var transcriptionBuffer: [Float] = []
     private var currentTranscription: String = ""
+    private var lastProcessedTime: TimeInterval = 0
+    private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    
+    // Thread safety
+    private let processingQueue = DispatchQueue(label: "com.whispertranscription.processing",
+                                              qos: .userInitiated)
+    private let transcriptionLock = NSLock()
     
     // Completion handlers
     private var transcriptionUpdateHandler: ((String) -> Void)?
@@ -31,17 +40,38 @@ class AudioTranscriber: NSObject {
         inputNode = audioEngine.inputNode
         super.init()
         setupAudioSession()
+        setupNotifications()
+    }
+    
+    deinit {
+        removeNotifications()
+        stopTranscribing()
     }
     
     // MARK: - Setup
     private func setupAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try session.setCategory(.record, mode: .measurement, options: [.duckOthers, .allowBluetooth])
             try session.setActive(true)
         } catch {
             errorHandler?(TranscriptionError.audioSessionSetupFailed(error))
         }
+    }
+    
+    private func setupNotifications() {
+        NotificationCenter.default.addObserver(self,
+                                             selector: #selector(handleInterruption),
+                                             name: AVAudioSession.interruptionNotification,
+                                             object: nil)
+        NotificationCenter.default.addObserver(self,
+                                             selector: #selector(handleRouteChange),
+                                             name: AVAudioSession.routeChangeNotification,
+                                             object: nil)
+    }
+    
+    private func removeNotifications() {
+        NotificationCenter.default.removeObserver(self)
     }
     
     private func setupAudioConverter() throws {
@@ -66,6 +96,7 @@ class AudioTranscriber: NSObject {
         self.errorHandler = errorHandler
         
         try setupAudioConverter()
+        startBackgroundTask()
         
         let outputFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                        sampleRate: modelSampleRate,
@@ -75,7 +106,7 @@ class AudioTranscriber: NSObject {
         inputNode.installTap(onBus: 0,
                            bufferSize: bufferSize,
                            format: inputNode.outputFormat(forBus: 0)) { [weak self] buffer, time in
-            self?.processAudioBuffer(buffer)
+            self?.processAudioBuffer(buffer, time: time)
         }
         
         audioEngine.prepare()
@@ -88,92 +119,129 @@ class AudioTranscriber: NSObject {
         
         audioEngine.stop()
         inputNode.removeTap(onBus: 0)
-        transcriptionBuffer.removeAll()
-        isTranscribing = false
         
-        // Process any remaining audio
-        processRemainingAudio()
+        // Process remaining audio in buffer
+        processingQueue.async { [weak self] in
+            self?.processRemainingAudio()
+            self?.cleanupTranscription()
+        }
+        
+        isTranscribing = false
+        endBackgroundTask()
+    }
+    
+    // MARK: - Background Task Management
+    private func startBackgroundTask() {
+        backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+            self?.endBackgroundTask()
+        }
+    }
+    
+    private func endBackgroundTask() {
+        if backgroundTask != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+        }
     }
     
     // MARK: - Audio Processing
-    private func processAudioBuffer(_ buffer: AVAudioPCMBuffer) {
+    private func processAudioBuffer(_ buffer: AVAudioPCMBuffer, time: AVAudioTime) {
+        processingQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            do {
+                let convertedBuffer = try self.convertBuffer(buffer)
+                self.appendToTranscriptionBuffer(convertedBuffer)
+                
+                // Process transcription at regular intervals
+                let currentTime = time.timeIntervalSinceNow
+                if currentTime - self.lastProcessedTime >= self.processingInterval {
+                    try self.processTranscriptionChunk()
+                    self.lastProcessedTime = currentTime
+                }
+            } catch {
+                self.handleError(error)
+            }
+        }
+    }
+    
+    private func convertBuffer(_ buffer: AVAudioPCMBuffer) throws -> [Float] {
         guard let converter = audioConverter else {
-            errorHandler?(TranscriptionError.audioConverterNotInitialized)
-            return
+            throw TranscriptionError.audioConverterNotInitialized
         }
         
-        let frameCount = AVAudioFrameCount(modelSampleRate * 0.1) // 100ms chunks
+        let frameCount = AVAudioFrameCount(modelSampleRate * processingInterval)
         guard let convertedBuffer = AVAudioPCMBuffer(pcmFormat: converter.outputFormat,
                                                    frameCapacity: frameCount) else {
-            errorHandler?(TranscriptionError.bufferCreationFailed)
-            return
+            throw TranscriptionError.bufferCreationFailed
         }
         
         var error: NSError?
-        converter.convert(to: convertedBuffer,
-                        error: &error) { inNumPackets, outStatus in
+        converter.convert(to: convertedBuffer, error: &error) { inNumPackets, outStatus in
             outStatus.pointee = .haveData
             return buffer
         }
         
         if let error = error {
-            errorHandler?(TranscriptionError.audioConversionFailed(error))
-            return
+            throw TranscriptionError.audioConversionFailed(error)
         }
         
         guard let channelData = convertedBuffer.floatChannelData?[0] else {
-            errorHandler?(TranscriptionError.invalidAudioData)
-            return
+            throw TranscriptionError.invalidAudioData
         }
         
-        // Append converted audio data to buffer
-        let newSamples = Array(UnsafeBufferPointer(start: channelData,
-                                                  count: Int(convertedBuffer.frameLength)))
+        return Array(UnsafeBufferPointer(start: channelData,
+                                       count: Int(convertedBuffer.frameLength)))
+    }
+    
+    private func appendToTranscriptionBuffer(_ newSamples: [Float]) {
+        transcriptionLock.lock()
+        defer { transcriptionLock.unlock() }
+        
         transcriptionBuffer.append(contentsOf: newSamples)
         
-        // Process transcription when we have enough data
-        if transcriptionBuffer.count >= Int(modelSampleRate * 0.5) { // Process every 500ms
-            processTranscriptionChunk()
+        // Maintain buffer size limit
+        if transcriptionBuffer.count > Int(modelSampleRate * maxAudioLength) {
+            transcriptionBuffer.removeFirst(transcriptionBuffer.count - Int(modelSampleRate * maxAudioLength))
         }
     }
     
-    private func processTranscriptionChunk() {
-        let chunkSize = Int(modelSampleRate * 0.5)
+    private func processTranscriptionChunk() throws {
+        transcriptionLock.lock()
+        defer { transcriptionLock.unlock() }
+        
+        let chunkSize = Int(modelSampleRate * processingInterval)
         guard transcriptionBuffer.count >= chunkSize else { return }
         
         let chunk = Array(transcriptionBuffer.prefix(chunkSize))
         transcriptionBuffer.removeFirst(chunkSize)
         
-        do {
-            let transcription = try transcribeAudioChunk(chunk)
-            if !transcription.isEmpty {
-                currentTranscription += transcription + " "
-                transcriptionUpdateHandler?(currentTranscription)
-            }
-        } catch {
-            errorHandler?(error)
+        let transcription = try transcribeAudioChunk(chunk)
+        if !transcription.isEmpty {
+            updateTranscription(transcription)
         }
     }
     
     private func processRemainingAudio() {
+        transcriptionLock.lock()
+        defer { transcriptionLock.unlock() }
+        
         guard !transcriptionBuffer.isEmpty else { return }
         
         do {
             let transcription = try transcribeAudioChunk(transcriptionBuffer)
             if !transcription.isEmpty {
-                currentTranscription += transcription
-                transcriptionUpdateHandler?(currentTranscription)
+                updateTranscription(transcription)
             }
         } catch {
-            errorHandler?(error)
+            handleError(error)
         }
         
         transcriptionBuffer.removeAll()
     }
     
-    // MARK: - Transcription
+    // MARK: - Transcription Processing
     private func transcribeAudioChunk(_ chunk: [Float]) throws -> String {
-        // Create audio buffer for the chunk
         let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                  sampleRate: modelSampleRate,
                                  channels: 1,
@@ -188,8 +256,67 @@ class AudioTranscriber: NSObject {
         }
         buffer.frameLength = AVAudioFrameCount(chunk.count)
         
-        // Process through WhisperModelManager
         return try whisperManager.transcribe(audioBuffer: buffer)
+    }
+    
+    private func updateTranscription(_ newText: String) {
+        currentTranscription += newText + " "
+        DispatchQueue.main.async { [weak self] in
+            self?.transcriptionUpdateHandler?(self?.currentTranscription ?? "")
+        }
+    }
+    
+    private func cleanupTranscription() {
+        currentTranscription = ""
+        transcriptionBuffer.removeAll()
+        lastProcessedTime = 0
+    }
+    
+    // MARK: - Error Handling
+    private func handleError(_ error: Error) {
+        DispatchQueue.main.async { [weak self] in
+            self?.errorHandler?(error)
+        }
+    }
+    
+    // MARK: - Audio Session Handling
+    @objc private func handleInterruption(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+        
+        switch type {
+        case .began:
+            stopTranscribing()
+        case .ended:
+            guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else { return }
+            let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+            if options.contains(.shouldResume) {
+                try? startTranscribing(
+                    updateHandler: transcriptionUpdateHandler ?? { _ in },
+                    errorHandler: errorHandler ?? { _ in }
+                )
+            }
+        @unknown default:
+            break
+        }
+    }
+    
+    @objc private func handleRouteChange(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
+            return
+        }
+        
+        switch reason {
+        case .oldDeviceUnavailable:
+            stopTranscribing()
+        default:
+            break
+        }
     }
 }
 
@@ -202,12 +329,16 @@ enum TranscriptionError: Error {
     case audioConversionFailed(Error)
     case invalidAudioData
     case transcriptionFailed(Error)
+    case backgroundTaskExpired
 }
 
 // MARK: - Helper Extensions
 extension AudioTranscriber {
     func clearTranscription() {
-        currentTranscription = ""
+        transcriptionLock.lock()
+        defer { transcriptionLock.unlock() }
+        
+        cleanupTranscription()
         transcriptionUpdateHandler?("")
     }
     
