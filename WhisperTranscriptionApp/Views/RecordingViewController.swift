@@ -46,6 +46,7 @@ class RecordingViewController: UIViewController {
     private var timer: Timer?
     private let audioRecorder = AudioRecorder.shared
     private let audioTranscriber = AudioTranscriber.shared
+    private var currentTranscription: String = ""
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -111,15 +112,11 @@ class RecordingViewController: UIViewController {
             pauseButton.isHidden = false
             stopButton.isHidden = false
 
-            // Start transcribing audio
-            try audioTranscriber.startTranscribing(updateHandler: { [weak self] transcription in
-                DispatchQueue.main.async {
-                    self?.updateTranscriptionLabel(transcription)
-                }
+            // Start transcribing audio in real-time
+            try audioTranscriber.transcribeInRealTime(updateHandler: { [weak self] transcriptionChunk in
+                self?.updateTranscriptionLabel(with: transcriptionChunk)
             }, errorHandler: { [weak self] error in
-                DispatchQueue.main.async {
-                    self?.showErrorAlert(error)
-                }
+                self?.showErrorAlert(error)
             })
         } catch {
             showErrorAlert(error)
@@ -145,13 +142,17 @@ class RecordingViewController: UIViewController {
         pauseButton.isHidden = true
         stopButton.isHidden = true
         transcriptionLabel.text = "Transcription will appear here..."
+        currentTranscription = ""
     }
 
-    private func updateTranscriptionLabel(_ transcription: String) {
+    private func updateTranscriptionLabel(with transcriptionChunk: String) {
+        // Append the new transcription chunk to the current transcription
+        currentTranscription += transcriptionChunk + " "
+
         // Formatting for font size and line spacing
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 4
-        let attributedText = NSAttributedString(string: transcription, attributes: [
+        let attributedText = NSAttributedString(string: currentTranscription, attributes: [
             .font: UIFont.systemFont(ofSize: 16),
             .paragraphStyle: paragraphStyle
         ])
@@ -191,7 +192,6 @@ class RecordingViewController: UIViewController {
 
     // MARK: - Deinitialization
     deinit {
-        // Clean up resources
         timer?.invalidate()
     }
 }
