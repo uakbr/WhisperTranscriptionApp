@@ -6,6 +6,9 @@ class AudioFileStorage {
     
     private let fileManager = FileManager.default
     private var audioPlayer: AVAudioPlayer?
+    private var progressTimer: Timer?
+    private var progressHandler: ((Double) -> Void)?
+    private var completionHandler: (() -> Void)?
     
     private init() {}
     
@@ -31,15 +34,26 @@ class AudioFileStorage {
     }
     
     // MARK: - Audio Playback
-    func playAudioFile(at url: URL) {
+    func playAudioFile(at url: URL, progressHandler: ((Double) -> Void)? = nil, completionHandler: (() -> Void)? = nil) {
         do {
             let audioSession = AVAudioSession.sharedInstance()
             try audioSession.setCategory(.playback)
             try audioSession.setActive(true)
             
             audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.delegate = self
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
+            
+            self.progressHandler = progressHandler
+            self.completionHandler = completionHandler
+            
+            // Start progress timer
+            progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                guard let self = self, let player = self.audioPlayer else { return }
+                self.progressHandler?(player.currentTime / player.duration)
+            }
+            
         } catch {
             ErrorAlertManager.shared.showAlert(
                 title: "Playback Error",
@@ -51,6 +65,10 @@ class AudioFileStorage {
     func stopPlayback() {
         audioPlayer?.stop()
         audioPlayer = nil
+        progressTimer?.invalidate()
+        progressTimer = nil
+        progressHandler = nil
+        completionHandler = nil
     }
     
     // MARK: - File Information
@@ -65,5 +83,13 @@ class AudioFileStorage {
             )
             return nil
         }
+    }
+}
+
+// MARK: - AVAudioPlayerDelegate
+extension AudioFileStorage: AVAudioPlayerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        stopPlayback()
+        completionHandler?()
     }
 }

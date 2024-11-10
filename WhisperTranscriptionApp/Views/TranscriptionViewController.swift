@@ -31,6 +31,12 @@ class TranscriptionViewController: UIViewController {
         return button
     }()
     
+    private let audioProgressView: UIProgressView = {
+        let progress = UIProgressView(progressViewStyle: .default)
+        progress.progressTintColor = .systemBlue
+        return progress
+    }()
+    
     // MARK: - Properties
     var transcription: Transcription?
     private var isPlaying = false
@@ -49,9 +55,11 @@ class TranscriptionViewController: UIViewController {
         
         view.addSubview(transcriptionTextView)
         view.addSubview(playButton)
+        view.addSubview(audioProgressView)
         
         transcriptionTextView.translatesAutoresizingMaskIntoConstraints = false
         playButton.translatesAutoresizingMaskIntoConstraints = false
+        audioProgressView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             playButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
@@ -62,7 +70,11 @@ class TranscriptionViewController: UIViewController {
             transcriptionTextView.topAnchor.constraint(equalTo: playButton.bottomAnchor, constant: 10),
             transcriptionTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             transcriptionTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            transcriptionTextView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
+            transcriptionTextView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10),
+            
+            audioProgressView.topAnchor.constraint(equalTo: playButton.bottomAnchor, constant: 8),
+            audioProgressView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            audioProgressView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
         ])
         
         if let transcription = transcription {
@@ -82,11 +94,29 @@ class TranscriptionViewController: UIViewController {
     }
     
     @objc private func togglePlayback() {
+        guard let audioURL = transcription?.audioURL else {
+            ErrorAlertManager.shared.showAlert(
+                title: "Playback Error",
+                message: "Audio file not found"
+            )
+            return
+        }
+        
         isPlaying.toggle()
         
         if isPlaying {
             playButton.setImage(UIImage(systemName: "pause.circle.fill"), for: .normal)
-            AudioFileStorage.shared.playAudioFile(at: transcription?.audioURL ?? URL(fileURLWithPath: ""))
+            AudioFileStorage.shared.playAudioFile(
+                at: audioURL,
+                progressHandler: { [weak self] progress in
+                    self?.audioProgressView.progress = Float(progress)
+                },
+                completionHandler: { [weak self] in
+                    self?.isPlaying = false
+                    self?.playButton.setImage(UIImage(systemName: "play.circle.fill"), for: .normal)
+                    self?.audioProgressView.progress = 0
+                }
+            )
         } else {
             playButton.setImage(UIImage(systemName: "play.circle.fill"), for: .normal)
             AudioFileStorage.shared.stopPlayback()

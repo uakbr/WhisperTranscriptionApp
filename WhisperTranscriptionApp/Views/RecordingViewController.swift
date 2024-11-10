@@ -141,11 +141,12 @@ class RecordingViewController: UIViewController {
         
         guard let duration = recordingStartTime.map({ Date().timeIntervalSince($0) }) else { return }
         
-        // Save the transcription to Core Data
+        // Save the transcription to Core Data with audio URL
         TranscriptionStorageManager.shared.saveTranscription(
             text: currentTranscription.trimmingCharacters(in: .whitespacesAndNewlines),
             date: Date(),
-            duration: duration
+            duration: duration,
+            audioURL: audioRecorder.currentRecordingURL
         )
         
         // End Dynamic Island Live Activity

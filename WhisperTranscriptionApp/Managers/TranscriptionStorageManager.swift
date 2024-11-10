@@ -27,11 +27,12 @@ class TranscriptionStorageManager {
     }
     
     // MARK: - CRUD Methods
-    func saveTranscription(text: String, date: Date, duration: TimeInterval) {
+    func saveTranscription(text: String, date: Date, duration: TimeInterval, audioURL: URL) {
         let transcription = Transcription(context: context)
         transcription.text = text
         transcription.date = date
         transcription.duration = duration
+        transcription.audioURL = audioURL
         
         saveContext()
     }
