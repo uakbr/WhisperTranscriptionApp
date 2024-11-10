@@ -1,4 +1,5 @@
 import UIKit
+import Supabase
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -9,9 +10,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
                options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
         window = UIWindow(windowScene: windowScene)
-        let transcriptionListVC = TranscriptionListViewController()
-        let navigationController = UINavigationController(rootViewController: transcriptionListVC)
-        window?.rootViewController = navigationController
+        
+        // Check if user is authenticated
+        let session = SupabaseManager.shared.client.auth.session
+        if session != nil {
+            let transcriptionListVC = TranscriptionListViewController()
+            let navigationController = UINavigationController(rootViewController: transcriptionListVC)
+            window?.rootViewController = navigationController
+        } else {
+            let loginVC = LoginViewController()
+            window?.rootViewController = loginVC
+        }
+        
         window?.makeKeyAndVisible()
     }
 

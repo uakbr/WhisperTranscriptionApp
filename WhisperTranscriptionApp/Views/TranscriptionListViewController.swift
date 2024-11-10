@@ -1,6 +1,7 @@
 import UIKit
 import CoreData
 import AuthenticationServices
+import Supabase
 
 class TranscriptionListViewController: UIViewController {
     // MARK: - UI Elements
@@ -32,7 +33,7 @@ class TranscriptionListViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         setupNavigationBar()
-        checkAuthenticationState()
+        fetchTranscriptions()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -91,14 +92,41 @@ class TranscriptionListViewController: UIViewController {
     
     // MARK: - Data Management
     private func fetchTranscriptions() {
-        CloudKitManager.shared.fetchTranscriptions { [weak self] result in
+        guard let userID = SupabaseManager.shared.client.auth.session?.user.id else {
+            // User is not authenticated
+            return
+        }
+        
+        // Fetch transcriptions from Supabase
+        let query = SupabaseManager.shared.client.database
+            .from("transcriptions")
+            .select()
+            .eq(column: "user_id", value: userID)
+            .order(column: "created_at", ascending: false)
+        
+        query.execute { result in
             switch result {
-            case .success(let records):
-                self?.transcriptions = records
-                self?.tableView.reloadData()
-                self?.emptyStateLabel.isHidden = !records.isEmpty
+            case .success(let response):
+                do {
+                    let data = try response.decoded(to: [TranscriptionRecord].self)
+                    self.transcriptions = data
+                    DispatchQueue.main.async {
+                        self.tableView.reloadData()
+                        self.emptyStateLabel.isHidden = !data.isEmpty
+                    }
+                } catch {
+                    ErrorAlertManager.shared.showAlert(
+                        title: "Data Error",
+                        message: "Failed to decode transcriptions.",
+                        in: self
+                    )
+                }
             case .failure(let error):
-                ErrorAlertManager.shared.handleCloudKitError(error, in: self)
+                ErrorAlertManager.shared.showAlert(
+                    title: "Fetch Error",
+                    message: error.localizedDescription,
+                    in: self
+                )
             }
         }
     }
@@ -116,6 +144,23 @@ class TranscriptionListViewController: UIViewController {
         authorizationController.delegate = self
         authorizationController.presentationContextProvider = self
         authorizationController.performRequests()
+    }
+    
+    @objc func handleLogout() {
+        SupabaseManager.shared.client.auth.signOut { result in
+            switch result {
+            case .success:
+                DispatchQueue.main.async {
+                    self.dismiss(animated: true)
+                }
+            case .failure(let error):
+                ErrorAlertManager.shared.showAlert(
+                    title: "Logout Error",
+                    message: error.localizedDescription,
+                    in: self
+                )
+            }
+        }
     }
 }
 

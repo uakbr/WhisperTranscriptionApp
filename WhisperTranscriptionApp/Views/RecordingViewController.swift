@@ -173,29 +173,43 @@ class RecordingViewController: UIViewController {
             try audioRecorder.stopRecording()
             audioTranscriber.stopTranscribing()
             stopTimer()
-
+            
             guard let duration = recordingStartTime.map({ Date().timeIntervalSince($0) }) else { return }
-
-            let transcriptionRecord = TranscriptionRecord(
-                text: currentTranscription.trimmingCharacters(in: .whitespacesAndNewlines),
-                date: Date(),
-                duration: duration,
-                audioURL: audioRecorder.currentRecordingURL
-            )
-
-            CloudKitManager.shared.saveTranscription(transcriptionRecord) { result in
-                switch result {
-                case .success:
-                    // Handle success, maybe notify the user or update UI
-                    break
-                case .failure(let error):
-                    ErrorAlertManager.shared.handleCloudKitError(error, in: self)
-                }
+            
+            // Save transcription to Supabase
+            guard let userID = SupabaseManager.shared.client.auth.session?.user.id else {
+                // Handle unauthenticated state
+                return
             }
-
+            
+            let transcriptionRecord = [
+                "user_id": userID.uuidString,
+                "text": currentTranscription.trimmingCharacters(in: .whitespacesAndNewlines),
+                "date": Date().iso8601String,
+                "duration": duration,
+                "audio_url": "" // Handle audio file upload separately if needed
+            ] as [String: Any]
+            
+            SupabaseManager.shared.client.database
+                .from("transcriptions")
+                .insert(values: transcriptionRecord)
+                .execute { result in
+                    switch result {
+                    case .success:
+                        // Handle success
+                        break
+                    case .failure(let error):
+                        ErrorAlertManager.shared.showAlert(
+                            title: "Save Error",
+                            message: error.localizedDescription,
+                            in: self
+                        )
+                    }
+                }
+            
             // End Dynamic Island Live Activity
             DynamicIslandController.shared.endDynamicIsland()
-
+            
             resetUI()
         } catch {
             // Handle errors during stop recording and saving

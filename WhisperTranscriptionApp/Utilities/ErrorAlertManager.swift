@@ -71,4 +71,12 @@ class ErrorAlertManager {
             in: viewController
         )
     }
+    
+    func handleSupabaseError(_ error: Error, in viewController: UIViewController? = nil) {
+        showAlert(
+            title: "Supabase Error",
+            message: error.localizedDescription,
+            in: viewController
+        )
+    }
 }
