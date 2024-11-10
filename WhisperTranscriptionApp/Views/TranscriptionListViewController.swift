@@ -118,20 +118,25 @@ extension TranscriptionListViewController: UITableViewDelegate {
             
             let transcription = self.transcriptions[indexPath.row]
             
-            // Delete audio file
-            if let audioURL = transcription.audioURL {
-                AudioFileStorage.shared.deleteAudioFile(at: audioURL)
+            do {
+                // Delete audio file
+                if let audioURL = transcription.audioURL {
+                    AudioFileStorage.shared.deleteAudioFile(at: audioURL)
+                }
+                
+                // Delete from Core Data
+                try TranscriptionStorageManager.shared.deleteTranscription(transcription)
+                
+                // Update UI
+                self.transcriptions.remove(at: indexPath.row)
+                tableView.deleteRows(at: [indexPath], with: .automatic)
+                self.emptyStateLabel.isHidden = !self.transcriptions.isEmpty
+                
+                completion(true)
+            } catch {
+                ErrorAlertManager.shared.handleStorageError(error, in: self)
+                completion(false)
             }
-            
-            // Delete from Core Data
-            TranscriptionStorageManager.shared.deleteTranscription(transcription)
-            
-            // Update UI
-            self.transcriptions.remove(at: indexPath.row)
-            tableView.deleteRows(at: [indexPath], with: .automatic)
-            self.emptyStateLabel.isHidden = !self.transcriptions.isEmpty
-            
-            completion(true)
         }
         
         let editAction = UIContextualAction(style: .normal, title: "Edit") { [weak self] _, _, completion in

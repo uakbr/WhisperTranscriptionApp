@@ -24,24 +24,43 @@ class ErrorAlertManager {
     }
     
     // Specific error handling methods
-    func handleMicrophonePermissionError() {
+    func handleMicrophonePermissionError(in viewController: UIViewController? = nil) {
         showAlert(
             title: "Microphone Access Required",
-            message: "Please enable microphone access in Settings to use the recording features."
+            message: "Please enable microphone access in Settings to use the recording features.",
+            in: viewController
         )
     }
     
-    func handleModelLoadingError(_ error: Error) {
+    func handleModelLoadingError(_ error: Error, in viewController: UIViewController? = nil) {
         showAlert(
             title: "Model Loading Error",
-            message: "Failed to load Whisper model: \(error.localizedDescription)"
+            message: "Failed to load the Whisper model: \(error.localizedDescription)",
+            in: viewController
         )
     }
     
-    func handleStorageError(_ error: Error) {
+    func handleStorageError(_ error: Error, in viewController: UIViewController? = nil) {
         showAlert(
             title: "Storage Error",
-            message: "Failed to save or retrieve data: \(error.localizedDescription)"
+            message: "Failed to save or retrieve data: \(error.localizedDescription)",
+            in: viewController
+        )
+    }
+    
+    func handleRecordingError(_ error: Error, in viewController: UIViewController? = nil) {
+        showAlert(
+            title: "Recording Error",
+            message: "An error occurred during recording: \(error.localizedDescription)",
+            in: viewController
+        )
+    }
+    
+    func handleTranscriptionError(_ error: Error, in viewController: UIViewController? = nil) {
+        showAlert(
+            title: "Transcription Error",
+            message: "An error occurred during transcription: \(error.localizedDescription)",
+            in: viewController
         )
     }
 }

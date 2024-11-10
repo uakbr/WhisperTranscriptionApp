@@ -127,8 +127,12 @@ class TranscriptionViewController: UIViewController {
         guard let transcription = transcription else { return }
         transcription.text = transcriptionTextView.text
         
-        TranscriptionStorageManager.shared.saveContext()
-        navigationController?.popViewController(animated: true)
+        do {
+            try TranscriptionStorageManager.shared.saveContext()
+            navigationController?.popViewController(animated: true)
+        } catch {
+            ErrorAlertManager.shared.handleStorageError(error, in: self)
+        }
     }
     
     @objc private func shareTranscription() {

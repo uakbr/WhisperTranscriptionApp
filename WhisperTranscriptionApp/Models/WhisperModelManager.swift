@@ -59,17 +59,10 @@ class WhisperModelManager {
     private func loadModel() {
         do {
             let config = MLModelConfiguration()
-            config.computeUnits = .all
-            
-            let modelURL = Bundle.main.url(forResource: "WhisperModel", withExtension: "mlmodelc")!
-            model = try WhisperModel(contentsOf: modelURL, configuration: config)
-            
-            print("Whisper model loaded successfully")
+            model = try WhisperModel(configuration: config)
         } catch {
-            ErrorAlertManager.shared.showAlert(
-                title: "Model Loading Error",
-                message: "Failed to load the Whisper model: \(error.localizedDescription)"
-            )
+            // Handle model loading error
+            ErrorAlertManager.shared.handleModelLoadingError(error)
         }
     }
     

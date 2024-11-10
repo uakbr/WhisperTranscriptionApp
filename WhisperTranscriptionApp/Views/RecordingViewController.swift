@@ -114,7 +114,7 @@ class RecordingViewController: UIViewController {
                 },
                 errorHandler: { [weak self] error in
                     DispatchQueue.main.async {
-                        self?.showErrorAlert(error)
+                        ErrorAlertManager.shared.handleTranscriptionError(error, in: self)
                     }
                 }
             )
@@ -128,7 +128,7 @@ class RecordingViewController: UIViewController {
             pauseButton.isHidden = false
             stopButton.isHidden = false
         } catch {
-            showErrorAlert(error)
+            ErrorAlertManager.shared.handleRecordingError(error, in: self)
         }
     }
 
@@ -140,24 +140,28 @@ class RecordingViewController: UIViewController {
     }
 
     @objc private func stopRecording() {
-        audioRecorder.stopRecording()
-        audioTranscriber.stopTranscribing()
-        stopTimer()
-        
-        guard let duration = recordingStartTime.map({ Date().timeIntervalSince($0) }) else { return }
-        
-        // Save the transcription to Core Data with audio URL
-        TranscriptionStorageManager.shared.saveTranscription(
-            text: currentTranscription.trimmingCharacters(in: .whitespacesAndNewlines),
-            date: Date(),
-            duration: duration,
-            audioURL: audioRecorder.currentRecordingURL
-        )
-        
-        // End Dynamic Island Live Activity
-        DynamicIslandController.shared.endDynamicIsland()
-        
-        resetUI()
+        do {
+            try audioRecorder.stopRecording()
+            audioTranscriber.stopTranscribing()
+            stopTimer()
+            
+            guard let duration = recordingStartTime.map({ Date().timeIntervalSince($0) }) else { return }
+            
+            // Save the transcription to Core Data with audio URL
+            try TranscriptionStorageManager.shared.saveTranscription(
+                text: currentTranscription.trimmingCharacters(in: .whitespacesAndNewlines),
+                date: Date(),
+                duration: duration,
+                audioURL: audioRecorder.currentRecordingURL
+            )
+            
+            // End Dynamic Island Live Activity
+            DynamicIslandController.shared.endDynamicIsland()
+            
+            resetUI()
+        } catch {
+            ErrorAlertManager.shared.handleRecordingError(error, in: self)
+        }
     }
 
     private func resetUI() {

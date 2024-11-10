@@ -27,14 +27,20 @@ class TranscriptionStorageManager {
     }
     
     // MARK: - CRUD Methods
-    func saveTranscription(text: String, date: Date, duration: TimeInterval, audioURL: URL) {
+    func saveTranscription(text: String, date: Date, duration: TimeInterval, audioURL: URL?) throws {
+        let context = persistentContainer.viewContext
         let transcription = Transcription(context: context)
         transcription.text = text
         transcription.date = date
         transcription.duration = duration
         transcription.audioURL = audioURL
         
-        saveContext()
+        do {
+            try context.save()
+        } catch {
+            // Throw the error to be handled by the caller
+            throw error
+        }
     }
     
     func fetchTranscriptions() -> [Transcription] {
@@ -54,9 +60,16 @@ class TranscriptionStorageManager {
         }
     }
     
-    func deleteTranscription(_ transcription: Transcription) {
+    func deleteTranscription(_ transcription: Transcription) throws {
+        let context = persistentContainer.viewContext
         context.delete(transcription)
-        saveContext()
+        
+        do {
+            try context.save()
+        } catch {
+            // Throw the error to be handled by the caller
+            throw error
+        }
     }
     
     // MARK: - Save Context
