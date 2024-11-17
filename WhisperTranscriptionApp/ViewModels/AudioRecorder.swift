@@ -34,30 +34,34 @@ class AudioRecorder: NSObject {
                     }
                 } else {
                     DispatchQueue.main.async {
-                        NotificationCenter.default.post(name: .recordingDidStop, object: nil)
+                        NotificationCenter.default.post(name: AudioRecorder.recordingDidStop, object: nil)
+                        if let viewController = UIApplication.shared.keyWindow?.rootViewController {
+                            ErrorAlertManager.shared.handleMicrophonePermissionError(in: viewController)
+                        }
                     }
                 }
             }
             return
         case .denied:
+            if let viewController = UIApplication.shared.keyWindow?.rootViewController {
+                ErrorAlertManager.shared.handleMicrophonePermissionError(in: viewController)
+            }
             throw AudioRecorderError.microphonePermissionDenied
         case .granted:
             break
         @unknown default:
-            throw AudioRecorderError.microphonePermissionDenied
+            break
         }
         
-        // Configure audio session
-        try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker])
+        // Setup audio session
+        try audioSession.setCategory(.playAndRecord, mode: .default, options: [])
         try audioSession.setActive(true)
         
-        // Set up audio engine and file
         audioEngine = AVAudioEngine()
         guard let audioEngine = audioEngine else { return }
         
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
-        
         audioFile = try AVAudioFile(forWriting: fileURL, settings: recordingFormat.settings)
         
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
@@ -72,19 +76,19 @@ class AudioRecorder: NSObject {
         try audioEngine.start()
         
         isRecording = true
-        NotificationCenter.default.post(name: .recordingDidStart, object: nil)
+        NotificationCenter.default.post(name: AudioRecorder.recordingDidStart, object: nil)
     }
     
     func pauseRecording() {
         guard isRecording else { return }
         audioEngine?.pause()
-        NotificationCenter.default.post(name: .recordingDidPause, object: nil)
+        NotificationCenter.default.post(name: AudioRecorder.recordingDidPause, object: nil)
     }
     
     func resumeRecording() throws {
         guard let audioEngine = audioEngine, !audioEngine.isRunning else { return }
         try audioEngine.start()
-        NotificationCenter.default.post(name: .recordingDidResume, object: nil)
+        NotificationCenter.default.post(name: AudioRecorder.recordingDidResume, object: nil)
     }
     
     func stopRecording() {
@@ -93,7 +97,7 @@ class AudioRecorder: NSObject {
         audioEngine?.inputNode.removeTap(onBus: 0)
         audioFile = nil
         isRecording = false
-        NotificationCenter.default.post(name: .recordingDidStop, object: nil)
+        NotificationCenter.default.post(name: AudioRecorder.recordingDidStop, object: nil)
     }
 }
 

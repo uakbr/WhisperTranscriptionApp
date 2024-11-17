@@ -49,6 +49,7 @@ class OnboardingSlide {
             imageView.topAnchor.constraint(equalTo: slideView.safeAreaLayoutGuide.topAnchor, constant: 30),
             imageView.centerXAnchor.constraint(equalTo: slideView.centerXAnchor),
             imageView.heightAnchor.constraint(equalToConstant: 200),
+            imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor),
             
             titleLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 20),
             titleLabel.leadingAnchor.constraint(equalTo: slideView.leadingAnchor, constant: 20),

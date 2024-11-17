@@ -28,6 +28,7 @@ class OnboardingViewController: UIViewController, UIScrollViewDelegate {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.isPagingEnabled = true
         scrollView.delegate = self
+        scrollView.showsHorizontalScrollIndicator = false
         
         pageControl.translatesAutoresizingMaskIntoConstraints = false
         pageControl.numberOfPages = slides.count

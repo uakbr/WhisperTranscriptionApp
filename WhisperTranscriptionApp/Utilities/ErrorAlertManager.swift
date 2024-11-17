@@ -8,8 +8,17 @@ class ErrorAlertManager {
     func showAlert(title: String, message: String, in viewController: UIViewController) {
         DispatchQueue.main.async {
             let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-            let okAction = UIAlertAction(title: "OK", style: .default)
+            let settingsAction = UIAlertAction(title: "Settings", style: .default) { _ in
+                if let settingsURL = URL(string: UIApplication.openSettingsURLString),
+                   UIApplication.shared.canOpenURL(settingsURL) {
+                    UIApplication.shared.open(settingsURL)
+                }
+            }
+            let okAction = UIAlertAction(title: "OK", style: .cancel)
             alert.addAction(okAction)
+            if title == "Microphone Access Denied" {
+                alert.addAction(settingsAction)
+            }
             viewController.present(alert, animated: true)
         }
     }
