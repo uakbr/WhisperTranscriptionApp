@@ -12,8 +12,14 @@ class WhisperTokenizer {
     }
 
     private func loadTokens() {
-        // Load tokens from whisper_tokens.json
-        // ...
+        guard let url = Bundle.main.url(forResource: "whisper_tokens", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let tokens = try? JSONSerialization.jsonObject(with: data) as? [String: Int] else {
+            fatalError("Failed to load whisper_tokens.json")
+        }
+        
+        self.tokenToIndexMap = tokens
+    }
     }
 
     func encode(_ text: String) throws -> [Int] {
