@@ -26,7 +26,7 @@ class WhisperTokenizer {
     }
     
     func detokenize(_ indices: [Int]) -> String {
-        let tokens = indices.compactMap { indexToTokenMap[index] }
+        let tokens = indices.compactMap { indexToTokenMap[$0] }
         return tokens.joined(separator: " ")
     }
     

@@ -40,7 +40,7 @@ class WhisperModelManagerTests: XCTestCase {
             return
         }
         
-        let frameCount = UInt32(file.length)
+        let frameCount = AVAudioFrameCount(file.length)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
             XCTFail("Failed to create PCM buffer")
             return
@@ -66,8 +66,11 @@ class WhisperModelManagerTests: XCTestCase {
     }
 
     func testTranscriptionWithInvalidAudio() {
-        let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000.0, channels: 1, interleaved: false)!
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024)!
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000.0, channels: 1, interleaved: false),
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024) else {
+            XCTFail("Failed to create audio format or buffer")
+            return
+        }
         buffer.frameLength = 1024
         
         let expectation = self.expectation(description: "Transcription completes")

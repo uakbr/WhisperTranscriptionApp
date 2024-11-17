@@ -13,6 +13,7 @@ class TranscriptionViewController: UIViewController {
         textView.layer.cornerRadius = 8.0
         textView.textContainerInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
         textView.textColor = .label
+        textView.accessibilityIdentifier = "transcriptionTextView"
         return textView
     }()
     
@@ -60,31 +61,30 @@ class TranscriptionViewController: UIViewController {
     
     // MARK: - UI Setup
     private func setupUI() {
-        view.backgroundColor = .white
+        view.backgroundColor = .systemBackground
         navigationItem.rightBarButtonItems = [saveButton, shareButton]
-        
-        view.addSubview(transcriptionTextView)
-        view.addSubview(playButton)
-        view.addSubview(audioProgressView)
         
         transcriptionTextView.translatesAutoresizingMaskIntoConstraints = false
         playButton.translatesAutoresizingMaskIntoConstraints = false
         audioProgressView.translatesAutoresizingMaskIntoConstraints = false
         
+        view.addSubview(transcriptionTextView)
+        view.addSubview(playButton)
+        view.addSubview(audioProgressView)
+        
         NSLayoutConstraint.activate([
-            playButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            playButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            playButton.widthAnchor.constraint(equalToConstant: 44),
-            playButton.heightAnchor.constraint(equalToConstant: 44),
-            
-            audioProgressView.centerYAnchor.constraint(equalTo: playButton.centerYAnchor),
-            audioProgressView.leadingAnchor.constraint(equalTo: playButton.trailingAnchor, constant: 10),
-            audioProgressView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            
-            transcriptionTextView.topAnchor.constraint(equalTo: playButton.bottomAnchor, constant: 20),
+            transcriptionTextView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             transcriptionTextView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             transcriptionTextView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            transcriptionTextView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10),
+            transcriptionTextView.bottomAnchor.constraint(equalTo: playButton.topAnchor, constant: -20),
+            
+            playButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            playButton.bottomAnchor.constraint(equalTo: audioProgressView.topAnchor, constant: -10),
+            
+            audioProgressView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            audioProgressView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            audioProgressView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
+            audioProgressView.heightAnchor.constraint(equalToConstant: 2)
         ])
         
         if let transcription = transcription {
@@ -92,26 +92,18 @@ class TranscriptionViewController: UIViewController {
         }
     }
     
-    // MARK: - Actions
+    // MARK: - Actions Setup
     private func setupActions() {
+        playButton.addTarget(self, action: #selector(playButtonTapped), for: .touchUpInside)
         saveButton.target = self
         saveButton.action = #selector(saveTranscription)
-        
         shareButton.target = self
         shareButton.action = #selector(shareTranscription)
-        
-        playButton.addTarget(self, action: #selector(togglePlayback), for: .touchUpInside)
     }
     
-    @objc private func togglePlayback() {
-        guard let audioURL = transcription?.audioURL else {
-            ErrorAlertManager.shared.showAlert(
-                title: "Playback Error",
-                message: "Audio file not found",
-                in: self
-            )
-            return
-        }
+    // MARK: - Button Actions
+    @objc private func playButtonTapped() {
+        guard let audioURL = transcription?.audioURL else { return }
         
         if isPlaying {
             stopPlayback()

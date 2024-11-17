@@ -8,6 +8,7 @@ class TranscriptionCell: UITableViewCell {
         let label = UILabel()
         label.font = .systemFont(ofSize: 16, weight: .semibold)
         label.textColor = .label
+        label.accessibilityIdentifier = "dateLabel"
         return label
     }()
     
@@ -15,6 +16,7 @@ class TranscriptionCell: UITableViewCell {
         let label = UILabel()
         label.font = .systemFont(ofSize: 14)
         label.textColor = .secondaryLabel
+        label.accessibilityIdentifier = "durationLabel"
         return label
     }()
     
@@ -23,6 +25,7 @@ class TranscriptionCell: UITableViewCell {
         label.font = .systemFont(ofSize: 14)
         label.textColor = .gray
         label.numberOfLines = 2
+        label.accessibilityIdentifier = "previewLabel"
         return label
     }()
     
@@ -64,6 +67,10 @@ class TranscriptionCell: UITableViewCell {
     func configure(with transcription: Transcription) {
         dateLabel.text = transcription.dateFormattedString()
         durationLabel.text = String(format: "Duration: %.1f seconds", transcription.duration)
-        previewLabel.text = transcription.text.count > 100 ? String(transcription.text.prefix(100)) + "..." : transcription.text
+        if let text = transcription.text, !text.isEmpty {
+            previewLabel.text = text.count > 100 ? String(text.prefix(100)) + "..." : text
+        } else {
+            previewLabel.text = "No transcription available."
+        }
     }
 } 
