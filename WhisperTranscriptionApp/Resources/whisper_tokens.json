@@ -1,5 +1,23 @@
 {
-    "<|startoftranscript|>": 50257,
-    "<|endoftext|>": 50256,
-    "<|notimestamps|>": 50363
+    "the": 0,
+    "and": 1,
+    "to": 2,
+    "of": 3,
+    "a": 4,
+    "in": 5,
+    "that": 6,
+    "is": 7,
+    "it": 8,
+    "for": 9,
+    "on": 10,
+    "with": 11,
+    "as": 12,
+    "I": 13,
+    "you": 14,
+    "not": 15,
+    "are": 16,
+    "be": 17,
+    "this": 18,
+    "have": 19,
+    "or": 20
 } 

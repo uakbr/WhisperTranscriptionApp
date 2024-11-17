@@ -1,6 +1,6 @@
 import UIKit
 
-class OnboardingViewController: UIViewController {
+class OnboardingViewController: UIViewController, UIScrollViewDelegate {
     // MARK: - UI Elements
     private let scrollView = UIScrollView()
     private let pageControl = UIPageControl()
@@ -56,100 +56,30 @@ class OnboardingViewController: UIViewController {
     
     private func setupSlideViews() {
         for (index, slide) in slides.enumerated() {
-            let slideView = slide.view
+            let slideView = slide.createView(target: self, actionSelector: #selector(getStartedTapped))
             slideView.translatesAutoresizingMaskIntoConstraints = false
             scrollView.addSubview(slideView)
             
             NSLayoutConstraint.activate([
-                slideView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-                slideView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
-                slideView.heightAnchor.constraint(equalTo: scrollView.heightAnchor),
-                slideView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: CGFloat(index) * view.frame.width)
+                slideView.widthAnchor.constraint(equalTo: view.widthAnchor),
+                slideView.heightAnchor.constraint(equalTo: view.heightAnchor),
+                slideView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: CGFloat(index) * view.frame.width),
+                slideView.topAnchor.constraint(equalTo: scrollView.topAnchor)
             ])
         }
-        
         scrollView.contentSize = CGSize(width: view.frame.width * CGFloat(slides.count), height: view.frame.height)
     }
     
+    // MARK: - Actions
     @objc private func getStartedTapped() {
-        // Dismiss onboarding and present login screen
-        if let window = UIApplication.shared.windows.first {
-            window.rootViewController = LoginViewController()
-            UIView.transition(with: window, duration: 0.5, options: .transitionCrossDissolve, animations: nil)
-        }
+        // Transition to the main interface or login screen
+        let loginVC = LoginViewController()
+        navigationController?.pushViewController(loginVC, animated: true)
     }
-}
-
-// MARK: - UIScrollViewDelegate
-extension OnboardingViewController: UIScrollViewDelegate {
+    
+    // MARK: - UIScrollViewDelegate
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let pageIndex = round(scrollView.contentOffset.x / view.frame.width)
         pageControl.currentPage = Int(pageIndex)
-    }
-}
-
-// MARK: - OnboardingSlide
-struct OnboardingSlide {
-    let title: String
-    let description: String
-    let imageName: String
-    var action: (() -> Void)?
-    
-    var view: UIView {
-        let slideView = UIView()
-        
-        let imageView = UIImageView(image: UIImage(named: imageName))
-        imageView.contentMode = .scaleAspectFit
-        
-        let titleLabel = UILabel()
-        titleLabel.text = title
-        titleLabel.font = UIFont.systemFont(ofSize: 24, weight: .bold)
-        titleLabel.textAlignment = .center
-        
-        let descriptionLabel = UILabel()
-        descriptionLabel.text = description
-        descriptionLabel.font = UIFont.systemFont(ofSize: 16)
-        descriptionLabel.textAlignment = .center
-        descriptionLabel.numberOfLines = 0
-        
-        let getStartedButton = UIButton(type: .system)
-        getStartedButton.setTitle("Get Started", for: .normal)
-        getStartedButton.titleLabel?.font = UIFont.systemFont(ofSize: 18, weight: .medium)
-        getStartedButton.backgroundColor = .systemBlue
-        getStartedButton.tintColor = .white
-        getStartedButton.layer.cornerRadius = 8
-        getStartedButton.clipsToBounds = true
-        getStartedButton.addTarget(nil, action: #selector(buttonTapped), for: .touchUpInside)
-        getStartedButton.isHidden = (title != "Manage")
-        
-        [imageView, titleLabel, descriptionLabel, getStartedButton].forEach {
-            $0.translatesAutoresizingMaskIntoConstraints = false
-            slideView.addSubview($0)
-        }
-        
-        NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: slideView.safeAreaLayoutGuide.topAnchor, constant: 30),
-            imageView.centerXAnchor.constraint(equalTo: slideView.centerXAnchor),
-            imageView.heightAnchor.constraint(equalToConstant: 200),
-            
-            titleLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 20),
-            titleLabel.leadingAnchor.constraint(equalTo: slideView.leadingAnchor, constant: 20),
-            titleLabel.trailingAnchor.constraint(equalTo: slideView.trailingAnchor, constant: -20),
-            
-            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
-            descriptionLabel.leadingAnchor.constraint(equalTo: slideView.leadingAnchor, constant: 20),
-            descriptionLabel.trailingAnchor.constraint(equalTo: slideView.trailingAnchor, constant: -20),
-            
-            getStartedButton.bottomAnchor.constraint(equalTo: slideView.safeAreaLayoutGuide.bottomAnchor, constant: -50),
-            getStartedButton.leadingAnchor.constraint(equalTo: slideView.leadingAnchor, constant: 50),
-            getStartedButton.trailingAnchor.constraint(equalTo: slideView.trailingAnchor, constant: -50),
-            getStartedButton.heightAnchor.constraint(equalToConstant: 50)
-        ])
-        
-        return slideView
-    }
-    
-    @objc private func buttonTapped() {
-        action?()
     }
 } 

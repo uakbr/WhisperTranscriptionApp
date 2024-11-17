@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 @testable import WhisperTranscriptionApp
 
 class WhisperModelManagerTests: XCTestCase {
@@ -7,6 +8,7 @@ class WhisperModelManagerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         modelManager = WhisperModelManager.shared
+        try? modelManager.loadModel()
     }
 
     override func tearDown() {
@@ -15,30 +17,39 @@ class WhisperModelManagerTests: XCTestCase {
     }
 
     func testModelLoading() {
-        // Test that the model loads without throwing errors
-        XCTAssertNoThrow(try modelManager.loadModel(), "Model should load without throwing an error")
         XCTAssertNotNil(modelManager.model, "Model should not be nil after loading")
     }
 
     func testTranscriptionWithValidAudio() {
-        // Prepare a sample audio buffer with known content
         guard let bundle = Bundle(for: type(of: self)),
               let audioURL = bundle.url(forResource: "test_sample", withExtension: "wav") else {
             XCTFail("Test audio file 'test_sample.wav' not found in test bundle")
             return
         }
-
-        let frameCount = AVAudioFrameCount(file.length)
+        
+        let file: AVAudioFile
+        do {
+            file = try AVAudioFile(forReading: audioURL)
+        } catch {
+            XCTFail("Error reading audio file: \(error)")
+            return
+        }
+        
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000.0, channels: 1, interleaved: false) else {
+            XCTFail("Failed to create audio format")
+            return
+        }
+        
+        let frameCount = UInt32(file.length)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
             XCTFail("Failed to create PCM buffer")
             return
         }
-
+        
         do {
             try file.read(into: buffer)
             let expectation = self.expectation(description: "Transcription completes")
-
-            modelManager.transcribe(audioBuffer: buffer) { result in
+            modelManager.transcribe(audioBuffer: buffer.floatChannelData![0], bufferSize: Int(buffer.frameLength)) { result in
                 switch result {
                 case .success(let transcription):
                     XCTAssertFalse(transcription.isEmpty, "Transcription should not be empty")
@@ -48,21 +59,19 @@ class WhisperModelManagerTests: XCTestCase {
                 }
                 expectation.fulfill()
             }
-
             waitForExpectations(timeout: 10, handler: nil)
         } catch {
-            XCTFail("Error reading test audio file: \(error)")
+            XCTFail("Error reading audio buffer: \(error)")
         }
     }
 
     func testTranscriptionWithInvalidAudio() {
-        // Create an empty audio buffer to simulate invalid input
-        let format = AVAudioFormat(standardFormatWithSampleRate: 16000.0, channels: 1)!
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 0)!
-
+        let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000.0, channels: 1, interleaved: false)!
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024)!
+        buffer.frameLength = 1024
+        
         let expectation = self.expectation(description: "Transcription completes")
-
-        modelManager.transcribe(audioBuffer: buffer) { result in
+        modelManager.transcribe(audioBuffer: buffer.floatChannelData![0], bufferSize: Int(buffer.frameLength)) { result in
             switch result {
             case .success(_):
                 XCTFail("Transcription should fail with invalid audio data")
@@ -71,7 +80,6 @@ class WhisperModelManagerTests: XCTestCase {
             }
             expectation.fulfill()
         }
-
         waitForExpectations(timeout: 5, handler: nil)
     }
 } 

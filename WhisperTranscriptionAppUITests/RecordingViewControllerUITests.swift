@@ -7,6 +7,7 @@ class RecordingViewControllerUITests: XCTestCase {
     override func setUp() {
         continueAfterFailure = false
         app = XCUIApplication()
+        app.launchArguments.append("--uitesting")
         app.launch()
     }
 
@@ -18,28 +19,26 @@ class RecordingViewControllerUITests: XCTestCase {
         addButton.tap()
 
         // Verify that the Start Recording button exists
-        let startRecordingButton = app.buttons["recordButton"]
+        let startRecordingButton = app.buttons["Start Recording"]
         XCTAssertTrue(startRecordingButton.exists, "Start Recording button should exist")
         
         // Tap Start Recording and check UI updates
         startRecordingButton.tap()
         
         // Verify that Pause and Stop buttons are visible
-        let pauseButton = app.buttons["pauseButton"]
-        let stopButton = app.buttons["stopButton"]
+        let pauseButton = app.buttons["Pause Recording"]
+        let stopButton = app.buttons["Stop Recording"]
         XCTAssertTrue(pauseButton.waitForExistence(timeout: 5), "Pause button should appear after starting recording")
         XCTAssertTrue(stopButton.exists, "Stop button should exist after starting recording")
 
         // Verify that the transcription label updates
-        let transcriptionLabel = app.staticTexts["transcriptionLabel"]
+        let transcriptionLabel = app.staticTexts["Transcription will appear here..."]
         XCTAssertTrue(transcriptionLabel.exists, "Transcription label should exist")
         
-        // Wait for some time to simulate recording
-        sleep(5) // Simulate recording for 5 seconds
-
-        // Verify that transcription label has updated text
-        let transcriptionText = transcriptionLabel.label
-        XCTAssertFalse(transcriptionText.isEmpty, "Transcription label should have text after recording")
+        // Wait for the transcription label to change
+        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "Transcription will appear here..."), object: transcriptionLabel)
+        let result = XCTWaiter().wait(for: [expectation], timeout: 10)
+        XCTAssertEqual(result, .completed, "Transcription label should update with text")
 
         // Tap Stop Recording
         stopButton.tap()
@@ -59,7 +58,7 @@ class RecordingViewControllerUITests: XCTestCase {
         XCTAssertTrue(transcriptionsNavigationBar.exists, "Transcriptions navigation bar should exist")
 
         let transcriptionCell = app.tables.cells.element(boundBy: 0)
-        XCTAssertTrue(transcriptionCell.exists, "There should be at least one transcription cell")
+        XCTAssertTrue(transcriptionCell.waitForExistence(timeout: 5), "There should be at least one transcription cell")
 
         // Swipe left to reveal Edit and Delete actions
         transcriptionCell.swipeLeft()
@@ -71,7 +70,7 @@ class RecordingViewControllerUITests: XCTestCase {
         // Test the Edit action
         editButton.tap()
         let transcriptionTextView = app.textViews["transcriptionTextView"]
-        XCTAssertTrue(transcriptionTextView.exists, "Transcription text view should appear after tapping Edit")
+        XCTAssertTrue(transcriptionTextView.waitForExistence(timeout: 5), "Transcription text view should appear after tapping Edit")
 
         // Go back to the list
         app.navigationBars.buttons.element(boundBy: 0).tap()

@@ -3,45 +3,52 @@ import Foundation
 class WhisperTokenizer {
     static let shared = WhisperTokenizer()
     
-    private var tokenToIndex: [String: Int] = [:]
-    private var indexToToken: [Int: String] = [:]
+    private var tokenToIndexMap: [String: Int] = [:]
+    private var indexToTokenMap: [Int: String] = [:]
     
     private init() {
-        loadTokenizer()
+        loadTokens()
     }
     
-    private func loadTokenizer() {
-        guard let url = Bundle.main.url(forResource: "whisper_tokens", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let tokens = try? JSONDecoder().decode([String: Int].self, from: data) else {
-            fatalError("Failed to load tokenizer vocabulary")
+    func tokenize(_ text: String) throws -> [Int] {
+        let tokens = text.components(separatedBy: .whitespacesAndNewlines)
+        var tokenIndices: [Int] = []
+        
+        for token in tokens {
+            if let index = tokenToIndexMap[token] {
+                tokenIndices.append(index)
+            } else {
+                throw TokenizationError.tokenNotFound(token)
+            }
         }
         
-        tokenToIndex = tokens
-        indexToToken = Dictionary(uniqueKeysWithValues: tokens.map { ($1, $0) })
+        return tokenIndices
     }
     
-    func tokenToIndex(_ token: String) throws -> Int {
-        guard let index = tokenToIndex[token] else {
-            throw WhisperError.tokenizationError
+    func detokenize(_ indices: [Int]) -> String {
+        let tokens = indices.compactMap { indexToTokenMap[index] }
+        return tokens.joined(separator: " ")
+    }
+    
+    private func loadTokens() {
+        guard let url = Bundle.main.url(forResource: "whisper_tokens", withExtension: "json") else {
+            print("whisper_tokens.json not found")
+            return
         }
-        return index
-    }
-    
-    func indexToToken(_ index: Int) throws -> String {
-        guard let token = indexToToken[index] else {
-            throw WhisperError.tokenizationError
+        
+        do {
+            let data = try Data(contentsOf: url)
+            let tokenDict = try JSONDecoder().decode([String: Int].self, from: data)
+            self.tokenToIndexMap = tokenDict
+            self.indexToTokenMap = tokenDict.reduce(into: [Int: String]()) { result, pair in
+                result[pair.value] = pair.key
+            }
+        } catch {
+            print("Error loading tokens: \(error)")
         }
-        return token
     }
-    
-    func encode(_ text: String) throws -> [Int] {
-        // Basic tokenization - in practice, you'd want more sophisticated rules
-        let tokens = text.split(separator: " ").map(String.init)
-        return try tokens.map { try tokenToIndex($0) }
-    }
-    
-    func decode(_ indices: [Int]) throws -> String {
-        try indices.map { try indexToToken($0) }.joined(separator: " ")
-    }
+}
+
+enum TokenizationError: Error {
+    case tokenNotFound(String)
 } 

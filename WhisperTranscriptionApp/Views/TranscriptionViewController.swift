@@ -1,5 +1,4 @@
 import UIKit
-import CoreData
 import AVFoundation
 
 class TranscriptionViewController: UIViewController {
@@ -9,6 +8,11 @@ class TranscriptionViewController: UIViewController {
         textView.font = UIFont.systemFont(ofSize: 16)
         textView.isEditable = true
         textView.isScrollEnabled = true
+        textView.layer.borderColor = UIColor.lightGray.cgColor
+        textView.layer.borderWidth = 1.0
+        textView.layer.cornerRadius = 8.0
+        textView.textContainerInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        textView.textColor = .label
         return textView
     }()
     
@@ -18,6 +22,9 @@ class TranscriptionViewController: UIViewController {
         button.tintColor = .systemBlue
         button.contentVerticalAlignment = .fill
         button.contentHorizontalAlignment = .fill
+        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        button.widthAnchor.constraint(equalTo: button.heightAnchor).isActive = true
+        button.accessibilityIdentifier = "playButton"
         return button
     }()
     
@@ -34,12 +41,15 @@ class TranscriptionViewController: UIViewController {
     private let audioProgressView: UIProgressView = {
         let progress = UIProgressView(progressViewStyle: .default)
         progress.progressTintColor = .systemBlue
+        progress.trackTintColor = .systemGray5
         return progress
     }()
     
     // MARK: - Properties
     var transcription: Transcription?
     private var isPlaying = false
+    private var audioPlayer: AVAudioPlayer?
+    private var playbackTimer: Timer?
     
     // MARK: - Lifecycle
     override func viewDidLoad() {
@@ -80,29 +90,6 @@ class TranscriptionViewController: UIViewController {
         if let transcription = transcription {
             transcriptionTextView.text = transcription.text
         }
-        
-        // Style play button
-        playButton.tintColor = .systemBlue
-        playButton.contentVerticalAlignment = .fill
-        playButton.contentHorizontalAlignment = .fill
-        playButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        playButton.widthAnchor.constraint(equalTo: playButton.heightAnchor).isActive = true
-
-        // Style progress view
-        audioProgressView.progressTintColor = .systemBlue
-        audioProgressView.trackTintColor = .systemGray5
-
-        // Style text view
-        transcriptionTextView.layer.borderColor = UIColor.lightGray.cgColor
-        transcriptionTextView.layer.borderWidth = 1.0
-        transcriptionTextView.layer.cornerRadius = 8.0
-        transcriptionTextView.textContainerInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
-        transcriptionTextView.font = UIFont.systemFont(ofSize: 16)
-        transcriptionTextView.textColor = .label
-
-        // Add accessibility identifiers
-        transcriptionTextView.accessibilityIdentifier = "transcriptionTextView"
-        playButton.accessibilityIdentifier = "playButton"
     }
     
     // MARK: - Actions
@@ -120,36 +107,58 @@ class TranscriptionViewController: UIViewController {
         guard let audioURL = transcription?.audioURL else {
             ErrorAlertManager.shared.showAlert(
                 title: "Playback Error",
-                message: "Audio file not found"
+                message: "Audio file not found",
+                in: self
             )
             return
         }
         
-        isPlaying.toggle()
-        
         if isPlaying {
-            playButton.setImage(UIImage(systemName: "pause.circle.fill"), for: .normal)
-            AudioFileStorage.shared.playAudioFile(
-                at: audioURL,
-                progressHandler: { progress in
-                    self.audioProgressView.progress = Float(progress)
-                },
-                completionHandler: {
-                    self.isPlaying = false
-                    self.playButton.setImage(UIImage(systemName: "play.circle.fill"), for: .normal)
-                    self.audioProgressView.progress = 0
-                }
-            )
+            stopPlayback()
         } else {
-            playButton.setImage(UIImage(systemName: "play.circle.fill"), for: .normal)
-            AudioFileStorage.shared.stopPlayback()
+            startPlayback(audioURL: audioURL)
         }
     }
     
+    private func startPlayback(audioURL: URL) {
+        do {
+            audioPlayer = try AVAudioPlayer(contentsOf: audioURL)
+            audioPlayer?.delegate = self
+            audioPlayer?.prepareToPlay()
+            audioPlayer?.play()
+            isPlaying = true
+            playButton.setImage(UIImage(systemName: "pause.circle.fill"), for: .normal)
+            
+            startPlaybackTimer()
+        } catch {
+            ErrorAlertManager.shared.showAlert(
+                title: "Playback Error",
+                message: error.localizedDescription,
+                in: self
+            )
+        }
+    }
+    
+    private func stopPlayback() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+        isPlaying = false
+        playButton.setImage(UIImage(systemName: "play.circle.fill"), for: .normal)
+        audioProgressView.progress = 0
+        playbackTimer?.invalidate()
+    }
+    
+    private func startPlaybackTimer() {
+        playbackTimer = Timer.scheduledTimer(timeInterval: 0.1, target: self, selector: #selector(updatePlaybackProgress), userInfo: nil, repeats: true)
+    }
+    
+    @objc private func updatePlaybackProgress() {
+        guard let player = audioPlayer else { return }
+        audioProgressView.progress = Float(player.currentTime / player.duration)
+    }
+    
     @objc private func saveTranscription() {
-        guard let transcription = transcription else { return }
-        transcription.text = transcriptionTextView.text
-        
+        transcription?.text = transcriptionTextView.text
         do {
             try TranscriptionStorageManager.shared.saveContext()
             navigationController?.popViewController(animated: true)
@@ -160,16 +169,17 @@ class TranscriptionViewController: UIViewController {
     
     @objc private func shareTranscription() {
         guard let text = transcriptionTextView.text else { return }
-        
-        let activityVC = UIActivityViewController(
-            activityItems: [text],
-            applicationActivities: nil
-        )
-        
+        let activityVC = UIActivityViewController(activityItems: [text], applicationActivities: nil)
         if let popoverController = activityVC.popoverPresentationController {
             popoverController.barButtonItem = shareButton
         }
-        
         present(activityVC, animated: true)
+    }
+}
+
+// MARK: - AVAudioPlayerDelegate
+extension TranscriptionViewController: AVAudioPlayerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        stopPlayback()
     }
 }
